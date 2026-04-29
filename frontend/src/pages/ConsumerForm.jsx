@@ -1,30 +1,31 @@
-// src/pages/ConsumerForm.js
-import { useState } from 'react';
-import axios from 'axios';
-import { Helmet } from 'react-helmet';
+// src/pages/ConsumerForm.jsx
+import { useState } from "react";
+import axios from "axios";
+import { Helmet } from "react-helmet";
+import { User, Mail, Phone } from "lucide-react";
 
-const API = 'http://localhost:5000/api';
+const API = "http://localhost:5000/api";
 
 export default function ConsumerForm() {
-  const [form, setForm] = useState({ name: '', email: '', phone: '' });
+  const [form, setForm] = useState({ name: "", email: "", phone: "" });
   const [errors, setErrors] = useState({});
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const validate = () => {
     const e = {};
     if (!form.name.trim() || form.name.length < 2)
-      e.name = 'Name must be at least 2 characters';
+      e.name = "Name must be at least 2 characters";
     if (!/^\S+@\S+\.\S+$/.test(form.email))
-      e.email = 'Enter a valid email address';
+      e.email = "Enter a valid email address";
     if (!/^[0-9]{10}$/.test(form.phone))
-      e.phone = 'Phone must be exactly 10 digits';
+      e.phone = "Phone must be exactly 10 digits";
     return e;
   };
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
-    setErrors({ ...errors, [e.target.name]: '' });
+    setErrors({ ...errors, [e.target.name]: "" });
   };
 
   const handleSubmit = async (e) => {
@@ -39,12 +40,10 @@ export default function ConsumerForm() {
     setSubmitting(true);
     try {
       await axios.post(`${API}/consumers`, form);
-      setMessage('Registration successful! Welcome aboard.');
-      setForm({ name: '', email: '', phone: '' });
+      setMessage("Registration successful! 🎉");
+      setForm({ name: "", email: "", phone: "" });
     } catch (err) {
-      setMessage(
-        err.response?.data?.message || 'Registration failed. Try again.'
-      );
+      setMessage("Registration failed. Try again.",err);
     } finally {
       setSubmitting(false);
     }
@@ -53,82 +52,107 @@ export default function ConsumerForm() {
   return (
     <>
       <Helmet>
-        <title>Register — RestaurantApp</title>
+        <title>Register</title>
       </Helmet>
 
-      <div className="form-container">
-        <h1>Consumer Registration</h1>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 pt-2">
+        <div className="w-full max-w-md bg-white rounded-3xl shadow-xl p-8">
 
-        {message && (
-          <div
-            className={`alert ${
-              message.includes('successful')
-                ? 'alert-success'
-                : 'alert-error'
-            }`}
-          >
-            {message}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} noValidate>
-          <div className="form-group">
-            <label htmlFor="name">Full Name</label>
-            <input
-              id="name"
-              name="name"
-              type="text"
-              value={form.name}
-              onChange={handleChange}
-              placeholder="Enter your full name"
-              className={errors.name ? 'input-error' : ''}
-            />
-            {errors.name && (
-              <span className="error-text">{errors.name}</span>
-            )}
+          {/* HEADER */}
+          <div className="text-center mb-6">
+            <h1 className="text-3xl font-bold text-gray-900">
+              Create Account
+            </h1>
+            <p className="text-gray-500 text-sm">
+              Join Savory Bites today
+            </p>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="email">Email Address</label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              value={form.email}
-              onChange={handleChange}
-              placeholder="Enter your email"
-              className={errors.email ? 'input-error' : ''}
-            />
-            {errors.email && (
-              <span className="error-text">{errors.email}</span>
-            )}
-          </div>
+          {/* MESSAGE */}
+          {message && (
+            <div
+              className={`mb-4 text-sm p-3 rounded-lg ${
+                message.includes("successful")
+                  ? "bg-green-100 text-green-700"
+                  : "bg-red-100 text-red-700"
+              }`}
+            >
+              {message}
+            </div>
+          )}
 
-          <div className="form-group">
-            <label htmlFor="phone">Phone Number</label>
-            <input
-              id="phone"
-              name="phone"
-              type="tel"
-              value={form.phone}
-              onChange={handleChange}
-              placeholder="10-digit phone number"
-              maxLength={10}
-              className={errors.phone ? 'input-error' : ''}
-            />
-            {errors.phone && (
-              <span className="error-text">{errors.phone}</span>
-            )}
-          </div>
+          {/* FORM */}
+          <form onSubmit={handleSubmit} className="space-y-4">
 
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={submitting}
-          >
-            {submitting ? 'Registering...' : 'Register'}
-          </button>
-        </form>
+            {/* NAME */}
+            <div>
+              <label className="text-sm text-gray-600">Full Name</label>
+              <div className="flex items-center border rounded-xl px-3 mt-1 focus-within:ring-2 focus-within:ring-teal-400">
+                <User size={16} className="text-gray-400" />
+                <input
+                  type="text"
+                  name="name"
+                  value={form.name}
+                  onChange={handleChange}
+                  placeholder="Enter your name"
+                  className="w-full p-2 outline-none"
+                />
+              </div>
+              {errors.name && (
+                <p className="text-red-500 text-xs mt-1">{errors.name}</p>
+              )}
+            </div>
+
+            {/* EMAIL */}
+            <div>
+              <label className="text-sm text-gray-600">Email</label>
+              <div className="flex items-center border rounded-xl px-3 mt-1 focus-within:ring-2 focus-within:ring-teal-400">
+                <Mail size={16} className="text-gray-400" />
+                <input
+                  type="email"
+                  name="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  placeholder="Enter your email"
+                  className="w-full p-2 outline-none"
+                />
+              </div>
+              {errors.email && (
+                <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+              )}
+            </div>
+
+            {/* PHONE */}
+            <div>
+              <label className="text-sm text-gray-600">Phone Number</label>
+              <div className="flex items-center border rounded-xl px-3 mt-1 focus-within:ring-2 focus-within:ring-teal-400">
+                <Phone size={16} className="text-gray-400" />
+                <input
+                  type="tel"
+                  name="phone"
+                  value={form.phone}
+                  onChange={handleChange}
+                  placeholder="10-digit number"
+                  maxLength={10}
+                  className="w-full p-2 outline-none"
+                />
+              </div>
+              {errors.phone && (
+                <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
+              )}
+            </div>
+
+            {/* BUTTON */}
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full bg-teal-500 text-white py-3 rounded-xl font-semibold hover:bg-teal-600 transition"
+            >
+              {submitting ? "Registering..." : "Register"}
+            </button>
+
+          </form>
+        </div>
       </div>
     </>
   );
