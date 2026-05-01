@@ -24,18 +24,21 @@ router.post('/', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const { minPrice, maxPrice } = req.query;
+
     let filter = {};
 
-    if (minPrice !== undefined && maxPrice !== undefined) {
-      filter.price = { $gte: Number(minPrice), $lte: Number(maxPrice) };
-    } else if (maxPrice !== undefined) {
-      filter.price = { $lt: Number(maxPrice) };
+    if (minPrice !== undefined) {
+      filter.price = { ...filter.price, $gte: Number(minPrice) };
+    }
+    if (maxPrice !== undefined) {
+      filter.price = { ...filter.price, $lte: Number(maxPrice) };
     }
 
     const items = await MenuItem.find(filter).sort({ price: 1 });
     res.json(items);
+
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
