@@ -41,5 +41,69 @@ router.get('/', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// PUT /api/menu/:id — Update menu item
+
+router.put('/:id', async (req, res) => {
+  try {
+
+    const { id } = req.params;
+
+    const updatedItem = await MenuItem.findByIdAndUpdate(
+      id,
+      req.body,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!updatedItem) {
+      return res.status(404).json({
+        message: 'Menu item not found',
+      });
+    }
+
+    res.json({
+      message: 'Menu item updated successfully',
+      item: updatedItem,
+    });
+
+  } catch (err) {
+
+    res.status(500).json({
+      message: 'Server error',
+      error: err.message,
+    });
+
+  }
+});
+// DELETE /api/menu/:id — Delete menu item
+
+router.delete('/:id', async (req, res) => {
+  try {
+
+    const { id } = req.params;
+
+    const deletedItem = await MenuItem.findByIdAndDelete(id);
+
+    if (!deletedItem) {
+      return res.status(404).json({
+        message: 'Menu item not found',
+      });
+    }
+
+    res.json({
+      message: 'Menu item deleted successfully',
+    });
+
+  } catch (err) {
+
+    res.status(500).json({
+      message: 'Server error',
+      error: err.message,
+    });
+
+  }
+});
 
 module.exports = router;
