@@ -1,24 +1,81 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const path = require('path');
-require('dotenv').config();
-const connectDB      = require('./config/db');
+//backend/server
+require("dotenv").config();
+const express = require("express");
+const cors = require("cors");
+const path = require("path");
+
+const connectDB = require("./config/db");
+
+// fail loudly at boot instead of failing mysteriously on first login
+if (!process.env.JWT_SECRET) {
+  throw new Error("JWT_SECRET is not set — check your .env file");
+}
+
+// catch anything that slips past try/catch blocks anywhere in the app
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled Rejection:", reason);
+  process.exit(1);
+});
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught Exception:", err);
+  process.exit(1);
+});
+
 const app = express();
-connectDB();
 
-// ─── Middleware ────────────────────────────────────────────────────────────────
-app.use(cors());
-app.use(express.json());                          // JSON body parsing
-app.use(express.urlencoded({ extended: true }));  // Form data parsing
-app.use(express.static(path.join(__dirname, 'public'))); // Serve static files
+// Connect Database — exit if it fails, rather than serving requests
+// against a DB that was never connected
+connectDB().catch((err) => {
+  console.error("Failed to connect to database:", err.message);
+  process.exit(1);
+});
 
-// ─── Routes ───────────────────────────────────────────────────────────────────
-app.use('/api/consumers', require('./routes/consumers'));
-app.use('/api/menu', require('./routes/menu'));
+// Middleware
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL || "http://localhost:3000", // lock to your actual frontend before production
+  })
+);
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, "public")));
 
-// Health check
-app.get('/api/health', (req, res) => res.json({ status: 'OK' }));
+// Routes
+app.use("/api/consumers", require("./routes/consumers"));
+app.use("/api/menu", require("./routes/menu"));
+app.use("/api/auth", require("./routes/auth"));
+app.use("/api/roles", require("./routes/roles"));
 
+
+// Home Route
+app.get("/", (req, res) => {
+  res.send("Server Running");
+});
+
+// Health Check
+app.get("/api/health", (req, res) => {
+  res.json({ status: "OK" });
+});
+
+// 404 handler — must come after all routes, before the error handler
+app.use((req, res) => {
+  res.status(404).json({ success: false, message: "Route not found" });
+});
+
+// Global Error Handler — catches errors Express itself surfaces
+// (malformed JSON, sync throws in middleware). Your route-level
+// try/catch blocks handle everything else.
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || "Something broke on the server",
+  });
+});
+
+// Start Server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port http://localhost:${PORT}`));
+
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
