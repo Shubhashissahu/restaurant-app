@@ -2,6 +2,8 @@
 const express = require('express');
 const router = express.Router();
 const Consumer = require('../models/Consumer');
+const verifyToken = require('../middleware/auth');
+const isAdmin = require('../middleware/isAdmin');
 
 // POST /api/consumers — Register a new consumer
 router.post('/', async (req, res) => {
@@ -31,7 +33,7 @@ router.post('/', async (req, res) => {
 });
 
 // GET /api/consumers — Fetch all consumers
-router.get('/', async (req, res) => {
+router.get('/', verifyToken, async (req, res) => {
   try {
     const consumers = await Consumer.find().sort({ createdAt: -1 });
     res.json(consumers);
@@ -41,7 +43,7 @@ router.get('/', async (req, res) => {
 });
 // PUT /api/consumers/:id — Update consumer
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', verifyToken, async (req, res) => {
   try {
 
     const { id } = req.params;
@@ -109,7 +111,7 @@ router.put('/:id', async (req, res) => {
 });
 // DELETE /api/consumers/:id — Delete consumer
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
   try {
 
     const { id } = req.params;
