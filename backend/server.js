@@ -56,8 +56,6 @@ app.use("/api/consumers", require("./routes/consumers"));
 app.use("/api/menu", require("./routes/menu"));
 app.use("/api/auth", authLimiter, require("./routes/auth"));
 app.use("/api/roles", require("./routes/roles"));
-
-
 // Home Route
 app.get("/", (req, res) => {
   res.send("Server Running");

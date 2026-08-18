@@ -1,4 +1,4 @@
-//components/Navbar
+import { useState, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   Home,
@@ -8,35 +8,59 @@ import {
   ChefHat,
   LogIn,
   LogOut,
+  Settings,
+  User,
+  ShieldAlert,
+  Briefcase
 } from "lucide-react";
+
+// Map string icons to components
+const iconMap = {
+  Home,
+  Menu,
+  UserPlus,
+  LayoutDashboard,
+  Settings,
+  User
+};
 
 export default function Navbar({ token, setToken }) {
   const navigate = useNavigate();
 
-  const role = localStorage.getItem("role");
+  const role = localStorage.getItem("role")?.toLowerCase();
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
     setToken(null);
-    navigate("/login");
   };
 
   const links = [
     { name: "Home", path: "/", icon: Home },
     { name: "Menu", path: "/menu", icon: Menu },
-    { name: "Register", path: "/register", icon: UserPlus },
+    { 
+      name: "Register", 
+      path: "/register", 
+      icon: UserPlus,
+      roles: ["admin", "manager"] 
+    },
     {
-      name: "Dashboard",
+      name: "Admin Dashboard",
       path: "/dashboard",
       icon: LayoutDashboard,
-      roles: ["admin", "manager", "user"], 
+      roles: ["admin"], 
     },
   ];
 
-  const filteredLinks = links.filter(
+  const staticFiltered = links.filter(
     (link) => !link.roles || link.roles.includes(role)
   );
+
+  const getRoleIcon = () => {
+    if (role === "admin") return <ShieldAlert size={16} className="text-red-400" />;
+    if (role === "manager") return <Briefcase size={16} className="text-yellow-400" />;
+    return <User size={16} className="text-blue-400" />;
+  };
 
   return (
     <nav className="fixed top-0 w-full z-50 backdrop-blur-xl bg-[#141414]/90 border-b border-[#3A2E24] shadow-lg">
@@ -59,7 +83,7 @@ export default function Navbar({ token, setToken }) {
         </div>
 
         <div className="flex items-center gap-2 bg-[#1E1E1E] border border-[#3A2E24] p-1.5 rounded-full">
-          {filteredLinks.map((link) => {
+          {staticFiltered.map((link) => {
             const Icon = link.icon;
             return (
               <NavLink
@@ -80,13 +104,22 @@ export default function Navbar({ token, setToken }) {
           })}
 
           {token ? (
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold bg-red-500 text-white hover:bg-red-600 transition"
-            >
-              <LogOut size={16} />
-              Logout
-            </button>
+            <div className="flex items-center gap-4 ml-4 pl-4 border-l border-[#3A2E24]">
+              {/* Profile Icon with Role */}
+              <div className="flex items-center gap-2 bg-[#2A2A2A] px-3 py-1.5 rounded-full border border-[#3A2E24]">
+                {getRoleIcon()}
+                <span className="text-sm font-semibold text-[#C2B59B] capitalize">
+                  {role || "User"}
+                </span>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition"
+              >
+                <LogOut size={16} />
+                Logout
+              </button>
+            </div>
           ) : (
             <NavLink
               to="/login"
