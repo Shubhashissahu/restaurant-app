@@ -21,7 +21,18 @@ process.on("uncaughtException", (err) => {
   process.exit(1);
 });
 
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
+
 const app = express();
+app.use(helmet());
+
+// Auth rate limiter to prevent brute force attacks
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // Limit each IP to 20 requests per `window`
+  message: { message: "Too many requests from this IP, please try again after 15 minutes" },
+});
 
 // Connect Database — exit if it fails, rather than serving requests
 // against a DB that was never connected
@@ -43,7 +54,7 @@ app.use(express.static(path.join(__dirname, "public")));
 // Routes
 app.use("/api/consumers", require("./routes/consumers"));
 app.use("/api/menu", require("./routes/menu"));
-app.use("/api/auth", require("./routes/auth"));
+app.use("/api/auth", authLimiter, require("./routes/auth"));
 app.use("/api/roles", require("./routes/roles"));
 
 

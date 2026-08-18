@@ -2,9 +2,11 @@
 const express = require('express');
 const router = express.Router();
 const MenuItem = require('../models/MenuItem');
+const verifyToken = require('../middleware/auth');
+const isAdmin = require('../middleware/isAdmin');
 
 // POST /api/menu — Add a new menu item
-router.post('/', async (req, res) => {
+router.post('/', verifyToken, async (req, res) => {
   try {
     const { name, description, price, category } = req.body;
 
@@ -44,7 +46,7 @@ router.get('/', async (req, res) => {
 });
 // PUT /api/menu/:id — Update menu item
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', verifyToken, async (req, res) => {
   try {
 
     const { id } = req.params;
@@ -80,7 +82,7 @@ router.put('/:id', async (req, res) => {
 });
 // DELETE /api/menu/:id — Delete menu item
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
   try {
 
     const { id } = req.params;

@@ -181,23 +181,25 @@ function getReviews(id) {
   return 20 + (seed % 80);
 }
 
-// ── Menu Card ────────────────────────────────────────────────────────────────
 function MenuCard({ item, ordered, onOrder }) {
- const photo =
-  FOOD_IMAGES[item.name] ||
-  item.imageUrl ||
-  FOOD_IMAGES.default;
+  const photo =
+    FOOD_IMAGES[item.name] ||
+    item.imageUrl ||
+    FOOD_IMAGES.default;
 
   const rating = getRating(item._id);
-
   const reviews = getReviews(item._id);
 
   return (
-    <div className="bg-[#1E1E1E] border border-[#3A2E24] rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 group flex flex-col">
+    <div className="group relative bg-[#1A1A1A]/95 backdrop-blur-xl border border-[#3A2E24] rounded-[28px] overflow-hidden shadow-2xl hover:-translate-y-3 hover:border-[#D4A373]/40 transition-all duration-500 flex flex-col">
+      {/* GOLD HOVER OVERLAY */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#D4A373]/5 via-transparent to-[#8B5E3C]/10 opacity-0 group-hover:opacity-100 transition duration-500 pointer-events-none z-10"></div>
+
+      {/* TOP SHINE */}
+      <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#D4A373]/50 to-transparent opacity-0 group-hover:opacity-100 transition duration-500 z-10"></div>
 
       {/* IMAGE */}
       <div className="relative h-56 overflow-hidden">
-
         <img
           src={photo}
           alt={item.name}
@@ -207,65 +209,65 @@ function MenuCard({ item, ordered, onOrder }) {
           }}
         />
 
-        <div className="absolute inset-0 bg-black/20"></div>
+        <div className="absolute inset-0 bg-black/30"></div>
 
-        {/* PRICE */}
-        <span className="absolute top-4 right-4 bg-[#D4A373] text-[#141414] text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
-          ₹{Number(item.price).toLocaleString("en-IN")}
-        </span>
-
-        {/* CATEGORY */}
-        <span className="absolute bottom-4 left-4 bg-[#141414]/90 backdrop-blur-sm text-[#FAF7F2] text-xs font-medium px-3 py-1 rounded-full border border-[#3A2E24]">
+        {/* CATEGORY BADGE */}
+        <span className="absolute top-4 left-4 bg-[#1A1A1A]/90 backdrop-blur-md text-[#D4A373] text-[10px] font-extrabold uppercase tracking-wide px-3 py-1.5 rounded-full shadow-xl border border-[#3A2E24]">
           {item.category || "General"}
         </span>
       </div>
 
       {/* CONTENT */}
-      <div className="p-5 flex flex-col flex-1">
-
+      <div className="p-6 flex flex-col flex-1 relative z-20">
         {/* RATING */}
-        <div className="flex items-center gap-1 mb-3">
-          <Star
-            size={13}
-            className="fill-[#D4A373] text-[#D4A373]"
-          />
-
-          <span className="text-xs font-semibold text-[#FAF7F2]">
-            {rating}
-          </span>
-
-          <span className="text-xs text-[#8B7E6A]">
-            ({reviews} reviews)
-          </span>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-1.5">
+            <Star size={14} className="fill-[#D4A373] text-[#D4A373]" />
+            <span className="text-sm font-bold text-[#FAF7F2]">{rating}</span>
+            <span className="text-xs text-[#8B7E6A]">({reviews})</span>
+          </div>
         </div>
 
         {/* TITLE */}
-        <h3 className="font-bold text-[#FAF7F2] text-lg leading-snug mb-2">
+        <h3 className="font-bold text-[#FAF7F2] text-xl leading-snug mb-2 group-hover:text-[#D4A373] transition-colors">
           {item.name}
         </h3>
 
         {/* DESCRIPTION */}
-        <p className="text-[#C2B59B] text-sm line-clamp-2 mb-5 flex-1 leading-relaxed">
-          {item.description ||
-            "A delicious dish crafted with fresh ingredients."}
+        <p className="text-[#C2B59B] text-sm line-clamp-2 mb-6 flex-1 leading-relaxed">
+          {item.description || "A delicious dish crafted with fresh ingredients."}
         </p>
 
-        {/* CTA */}
-        {ordered ? (
-          <div className="flex items-center gap-2 justify-center py-3 rounded-2xl bg-[#2A2A2A] text-[#D4A373] text-sm font-semibold border border-[#3A2E24]">
-            <CheckCircle size={16} />
-            Added to Order
+        {/* PRICE + CTA */}
+        <div className="flex items-center justify-between mt-auto">
+          <div>
+            <p className="text-[10px] uppercase tracking-widest text-[#8B7E6A] mb-1">
+              Price
+            </p>
+            <span className="text-[#D4A373] font-bold text-2xl">
+              ₹{Number(item.price).toLocaleString("en-IN")}
+            </span>
           </div>
-        ) : (
-          <button
-            onClick={() => onOrder(item)}
-            className="flex items-center justify-center gap-2 bg-[#D4A373] hover:bg-[#8B5E3C] active:scale-95 text-[#141414] text-sm font-semibold py-3 rounded-2xl transition-all duration-300"
-          >
-            <ShoppingCart size={15} />
-            Order Now
-          </button>
-        )}
+
+          {ordered ? (
+            <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#D4A373]/10 border border-[#D4A373]/30 text-[#D4A373] text-sm font-semibold">
+              <CheckCircle size={16} />
+              Added
+            </div>
+          ) : (
+            <button
+              onClick={() => onOrder(item)}
+              className="group/btn relative w-12 h-12 rounded-2xl bg-gradient-to-br from-[#D4A373] to-[#8B5E3C] flex items-center justify-center text-[#141414] shadow-2xl hover:scale-110 active:scale-95 transition-all duration-300 overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-white/20 opacity-0 group-hover/btn:opacity-100 transition duration-300"></div>
+              <ShoppingCart size={18} className="relative z-10" />
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* BOTTOM GOLD LINE */}
+      <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-[#D4A373] to-[#8B5E3C] scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left z-10"></div>
     </div>
   );
 }
@@ -436,11 +438,10 @@ export default function Menu() {
                   setActiveCategory(cat.name)
                 }
                 className={`relative min-w-[110px] h-24 rounded-2xl overflow-hidden shrink-0 transition-all duration-300 shadow-lg
-                ${
-                  activeCategory === cat.name
+                ${activeCategory === cat.name
                     ? "ring-2 ring-[#D4A373] ring-offset-2 ring-offset-[#141414] scale-105"
                     : "hover:scale-105"
-                }`}
+                  }`}
               >
                 {cat.img ? (
                   <>
@@ -452,11 +453,10 @@ export default function Menu() {
 
                     <div
                       className={`absolute inset-0 flex flex-col items-center justify-center
-                      ${
-                        activeCategory === cat.name
+                      ${activeCategory === cat.name
                           ? "bg-[#D4A373]/70"
                           : "bg-black/50 hover:bg-black/40"
-                      }`}
+                        }`}
                     >
                       <span className="text-2xl">
                         {cat.emoji}
@@ -470,11 +470,10 @@ export default function Menu() {
                 ) : (
                   <div
                     className={`w-full h-full flex flex-col items-center justify-center
-                    ${
-                      activeCategory === cat.name
+                    ${activeCategory === cat.name
                         ? "bg-[#D4A373] text-[#141414]"
                         : "bg-[#1E1E1E] text-[#FAF7F2]"
-                    }`}
+                      }`}
                   >
                     <span className="text-2xl">
                       {cat.emoji}
@@ -502,11 +501,10 @@ export default function Menu() {
                 key={btn.value}
                 onClick={() => setFilter(btn.value)}
                 className={`px-5 py-2 rounded-full text-sm font-medium transition shadow-sm
-                ${
-                  filter === btn.value
+                ${filter === btn.value
                     ? "bg-[#D4A373] text-[#141414]"
                     : "bg-[#1E1E1E] text-[#FAF7F2] hover:shadow-xl border border-[#3A2E24]"
-                }`}
+                  }`}
               >
                 {btn.label}
               </button>
@@ -518,11 +516,10 @@ export default function Menu() {
             <p className="text-center text-xs text-[#8B7E6A] mb-8">
               {visibleItems.length === 0
                 ? "No items found"
-                : `Showing ${visibleItems.length} item${
-                    visibleItems.length !== 1
-                      ? "s"
-                      : ""
-                  }`}
+                : `Showing ${visibleItems.length} item${visibleItems.length !== 1
+                  ? "s"
+                  : ""
+                }`}
             </p>
           )}
 
