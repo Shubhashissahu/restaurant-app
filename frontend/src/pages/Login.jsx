@@ -31,7 +31,7 @@ export default function Login({ setToken }) {
 
       if (setToken) setToken(res.data.token);
 
-      if (actualRole && actualRole !== loginAs) {
+      if (actualRole && actualRole.toLowerCase() !== loginAs.toLowerCase()) {
         toast(`You're signed in as ${actualRole}, not ${loginAs}.`, {
           icon: "ℹ️",
         });

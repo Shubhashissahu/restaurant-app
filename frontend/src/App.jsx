@@ -39,7 +39,7 @@ function App() {
             <Route
               path="/dashboard"
               element={
-                <ProtectedRoute token={token}>
+                <ProtectedRoute token={token} allowedRoles={["admin"]}>
                   <Dashboard />
                 </ProtectedRoute>
               }

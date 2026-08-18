@@ -1,7 +1,7 @@
 // src/pages/Dashboard.jsx
 import { useEffect, useState } from "react";
 import axios from "axios";
-import {Utensils,Clock,Users,Plus,Pencil,Trash2,X,} from "lucide-react";
+import { Utensils, Clock, Users, Plus, Pencil, Trash2, X, } from "lucide-react";
 
 const API = "http://localhost:5000/api";
 
@@ -311,11 +311,14 @@ export default function Dashboard() {
 
   const [editConsumer, setEditConsumer] = useState(null);
 
+  const token = localStorage.getItem("token");
+  const config = { headers: { Authorization: `Bearer ${token}` } };
+
   useEffect(() => {
 
     Promise.all([
       axios.get(`${API}/menu`),
-      axios.get(`${API}/consumers`),
+      axios.get(`${API}/consumers`, config),
     ])
       .then(([m, c]) => {
         setMenuItems(m.data);
@@ -333,7 +336,8 @@ export default function Dashboard() {
 
       const res = await axios.post(
         `${API}/menu`,
-        item
+        item,
+        config
       );
 
       setMenuItems((prev) => [
@@ -353,7 +357,8 @@ export default function Dashboard() {
 
       const res = await axios.put(
         `${API}/menu/${item._id}`,
-        item
+        item,
+        config
       );
 
       setMenuItems((prev) =>
@@ -374,7 +379,7 @@ export default function Dashboard() {
   const handleDelete = async (id) => {
     try {
 
-      await axios.delete(`${API}/menu/${id}`);
+      await axios.delete(`${API}/menu/${id}`, config);
 
       setMenuItems((prev) =>
         prev.filter((i) => i._id !== id)
@@ -391,7 +396,8 @@ export default function Dashboard() {
     try {
       const res = await axios.put(
         `${API}/consumers/${consumer._id}`,
-        consumer
+        consumer,
+        config
       );
 
       setConsumers((prev) =>
@@ -409,7 +415,8 @@ export default function Dashboard() {
     try {
 
       await axios.delete(
-        `${API}/consumers/${id}`
+        `${API}/consumers/${id}`,
+        config
       );
 
       setConsumers((prev) =>
@@ -431,13 +438,19 @@ export default function Dashboard() {
         {/* HEADER */}
         <div>
 
-          <h1 className="text-4xl font-bold">
-            Admin Dashboard
-          </h1>
-
-          <p className="text-[#D4A373] mt-1 text-sm">
-            Manage your restaurant operations
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 bg-[#D4A373] rounded-2xl flex items-center justify-center text-[#141414] shadow-lg">
+            <Utensils size={24} />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-[#FAF7F2]">
+              Admin Dashboard
+            </h1>
+            <p className="text-[#C2B59B] text-sm">
+              Manage your restaurant's digital presence
+            </p>
+          </div>
+        </div>
 
           <div className="mt-3 w-20 h-1 rounded-full bg-gradient-to-r from-[#D4A373] to-[#8B5E3C]" />
 
