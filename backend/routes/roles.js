@@ -9,4 +9,7 @@ router.get("/", ctrl.getRoles);
 router.put("/:id", verifyToken, isAdmin, ctrl.updateRole);
 router.delete("/:id", verifyToken, isAdmin, ctrl.deleteRole);
 
+router.get("/:id/permissions", verifyToken, isAdmin, ctrl.getRolePermissions);
+router.put("/:id/permissions", verifyToken, isAdmin, ctrl.updateRolePermissions);
+
 module.exports = router;

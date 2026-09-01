@@ -19,14 +19,14 @@ function App() {
 
   return (
     <Router>
-      <div className="flex flex-col min-h-screen">
+      <div className="flex flex-col min-h-screen bg-[#141414]">
 
         {/* NAVBAR (now auth-aware) */}
         <Navbar token={token} setToken={setToken} />
         <Toaster position="top-center" />
 
         {/* MAIN */}
-        <main className="flex-grow pt-16">
+        <main className="flex-grow pt-20">
           <Routes>
 
             <Route path="/" element={<Home />} />
@@ -37,7 +37,7 @@ function App() {
 
             {/* PROTECTED ROUTE */}
             <Route
-              path="/dashboard"
+              path="/dashboard/*"
               element={
                 <ProtectedRoute token={token} allowedRoles={["admin"]}>
                   <Dashboard />
