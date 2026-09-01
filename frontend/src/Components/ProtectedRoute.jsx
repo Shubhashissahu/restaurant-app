@@ -3,7 +3,18 @@ import { Navigate } from "react-router-dom";
 
 export default function ProtectedRoute({ children, allowedRoles }) {
   const token = localStorage.getItem("token");
-  const role = localStorage.getItem("role")?.toLowerCase();
+  let role = localStorage.getItem("role")?.toLowerCase();
+
+  if (token) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      if (payload.role) {
+        role = payload.role.toLowerCase();
+      }
+    } catch (e) {
+      console.error("Failed to parse token", e);
+    }
+  }
 
   if (!token) {
     return <Navigate to="/login" replace />;

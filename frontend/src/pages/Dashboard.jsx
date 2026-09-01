@@ -1,664 +1,101 @@
-// src/pages/Dashboard.jsx
-import { useEffect, useState } from "react";
-import axios from "axios";
-import { Utensils, Clock, Users, Plus, Pencil, Trash2, X, } from "lucide-react";
+import { useState, useEffect } from "react";
+import { 
+  LayoutDashboard, 
+  Users, 
+  ShieldAlert, 
+  MenuSquare, 
+  KeySquare, 
+  History, 
+  UserCircle,
+  LogOut
+} from "lucide-react";
+import { NavLink, Routes, Route, useNavigate, Navigate } from "react-router-dom";
 
-const API = "http://localhost:5000/api";
+import Overview from "../components/admin/Overview";
+import UserManagement from "../components/admin/UserManagement";
+import RoleManagement from "../components/admin/RoleManagement";
+import MenuManagement from "../components/admin/MenuManagement";
+import RolePermissions from "../components/admin/RolePermissions";
+import AuditLogs from "../components/admin/AuditLogs";
+import ProfileSettings from "../components/admin/ProfileSettings";
 
-const INPUT =
-  "w-full bg-[#2A2A2A] border border-[#3A2E24] rounded-xl px-4 py-3 text-sm text-[#FAF7F2] placeholder:text-[#8B7E6A] focus:outline-none focus:ring-2 focus:ring-[#D4A373] transition";
-
-// ── Stat Card ─────────────────────────────────────
-function StatCard({ icon: Icon, label, value }) {
-  return (
-    <div className="bg-[#1E1E1E] rounded-2xl shadow-xl border border-[#3A2E24] p-6 flex flex-col gap-4 relative overflow-hidden before:absolute before:top-0 before:left-0 before:right-0 before:h-1 before:bg-gradient-to-r before:from-[#D4A373] before:to-[#8B5E3C]">
-
-      <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-[#2A2A2A]">
-        <Icon size={22} className="text-[#D4A373]" />
-      </div>
-
-      <div>
-        <p className="text-sm text-[#C2B59B] mb-1">{label}</p>
-
-        <p className="text-3xl font-bold text-[#FAF7F2]">
-          {value}
-        </p>
-      </div>
-
-    </div>
-  );
-}
-
-// ── Menu Card ─────────────────────────────────────
-function MenuItemCard({ item, onEdit, onDelete }) {
-  return (
-    <div className="border border-[#3A2E24] rounded-2xl p-5 flex flex-col gap-3 bg-[#1E1E1E] hover:shadow-2xl hover:-translate-y-1 transition">
-
-      <div className="flex justify-between gap-2">
-
-        <p className="font-bold text-[#FAF7F2]">
-          {item.name}
-        </p>
-
-        <p className="text-[#D4A373] font-bold whitespace-nowrap">
-          ₹{Number(item.price).toLocaleString("en-IN")}
-        </p>
-
-      </div>
-
-      {item.description && (
-        <p className="text-sm text-[#C2B59B]">
-          {item.description}
-        </p>
-      )}
-
-      <div className="flex items-center justify-between mt-auto">
-
-        <span className="text-xs bg-[#2A2A2A] text-[#D4A373] px-3 py-1 rounded-full border border-[#3A2E24]">
-          {item.category}
-        </span>
-
-        <div className="flex gap-2">
-
-          <button
-            onClick={() => onEdit(item)}
-            className="text-[#D4A373] hover:text-white"
-          >
-            <Pencil size={15} />
-          </button>
-
-          <button
-            onClick={() => onDelete(item._id)}
-            className="text-red-400 hover:text-red-500"
-          >
-            <Trash2 size={15} />
-          </button>
-
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Item Modal ────────────────────────────────────
-function ItemModal({ initial, onClose, onSubmit }) {
-
-  const [form, setForm] = useState(
-    initial || {
-      name: "",
-      category: "Main Course",
-      price: "",
-      description: "",
-    }
-  );
-
-  const [error, setError] = useState("");
-
-  const handleSubmit = () => {
-
-    if (!form.name.trim())
-      return setError("Item name is required");
-
-    if (!form.price || Number(form.price) <= 0)
-      return setError("Enter valid price");
-
-    onSubmit({
-      ...form,
-      price: Number(form.price),
-    });
-
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-
-      <div className="bg-[#1E1E1E] rounded-2xl shadow-2xl w-full max-w-md mx-4 p-8 border border-[#3A2E24]">
-
-        <div className="flex items-center justify-between mb-6">
-
-          <h2 className="text-xl font-bold text-[#FAF7F2]">
-            {initial ? "Edit Menu Item" : "Add Menu Item"}
-          </h2>
-
-          <button
-            onClick={onClose}
-            className="text-[#C2B59B] hover:text-white"
-          >
-            <X size={20} />
-          </button>
-
-        </div>
-
-        <div className="space-y-4">
-
-          <input
-            className={INPUT}
-            placeholder="Item Name"
-            value={form.name}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                name: e.target.value,
-              })
-            }
-          />
-
-          <select
-            className={INPUT}
-            value={form.category}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                category: e.target.value,
-              })
-            }
-          >
-            <option>Main Course</option>
-            <option>Starters</option>
-            <option>Appetizers</option>
-            <option>Desserts</option>
-          </select>
-
-          <input
-            type="number"
-            className={INPUT}
-            placeholder="Price"
-            value={form.price}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                price: e.target.value,
-              })
-            }
-          />
-
-          <textarea
-            className={`${INPUT} resize-none h-24`}
-            placeholder="Description"
-            value={form.description}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                description: e.target.value,
-              })
-            }
-          />
-
-          {error && (
-            <p className="text-sm text-red-400">
-              {error}
-            </p>
-          )}
-
-          <button
-            onClick={handleSubmit}
-            className="w-full bg-[#D4A373] hover:bg-[#8B5E3C] text-[#141414] font-semibold py-3 rounded-xl transition"
-          >
-            {initial ? "Save Changes" : "Add Menu Item"}
-          </button>
-
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Consumer Modal ────────────────────────────────
-function ConsumerModal({ initial, onClose, onSubmit }) {
-
-  const [form, setForm] = useState(initial);
-  const [error, setError] = useState("");
-
-  const handleSubmit = () => {
-
-    if (
-      !form.name.trim() ||
-      !form.email.trim() ||
-      !form.phone.trim()
-    ) {
-      return setError("All fields required");
-    }
-
-    onSubmit(form);
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-
-      <div className="bg-[#1E1E1E] rounded-2xl shadow-2xl w-full max-w-md mx-4 p-8 border border-[#3A2E24]">
-
-        <div className="flex items-center justify-between mb-6">
-
-          <h2 className="text-xl font-bold text-[#FAF7F2]">
-            Edit Consumer
-          </h2>
-
-          <button
-            onClick={onClose}
-            className="text-[#C2B59B] hover:text-white"
-          >
-            <X size={20} />
-          </button>
-
-        </div>
-
-        <div className="space-y-4">
-
-          <input
-            className={INPUT}
-            value={form.name}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                name: e.target.value,
-              })
-            }
-          />
-
-          <input
-            type="email"
-            className={INPUT}
-            value={form.email}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                email: e.target.value,
-              })
-            }
-          />
-
-          <input type="tel"
-            className={INPUT}
-            value={form.phone}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                phone: e.target.value,
-              })
-            }
-          />
-
-          {error && (
-            <p className="text-sm text-red-400">
-              {error}
-            </p>
-          )}
-
-          <button
-            onClick={handleSubmit}
-            className="w-full bg-[#D4A373] hover:bg-[#8B5E3C] text-[#141414] font-semibold py-3 rounded-xl transition"
-          >
-            Save Changes
-          </button>
-
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Dashboard ─────────────────────────────────────
 export default function Dashboard() {
+  const navigate = useNavigate();
 
-  const [menuItems, setMenuItems] = useState([]);
-  const [consumers, setConsumers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Sidebar Links
+  const adminLinks = [
+    { name: "Overview", path: "", icon: LayoutDashboard },
+    { name: "Users", path: "users", icon: Users },
+    { name: "Roles", path: "roles", icon: ShieldAlert },
+    { name: "Menus", path: "menus", icon: MenuSquare },
+    { name: "Permissions", path: "permissions", icon: KeySquare },
+    { name: "Audit Logs", path: "audit", icon: History },
+    { name: "Settings", path: "settings", icon: UserCircle },
+  ];
 
-  const [showModal, setShowModal] = useState(false);
-  const [editItem, setEditItem] = useState(null);
-
-  const [editConsumer, setEditConsumer] = useState(null);
-
-  const token = localStorage.getItem("token");
-  const config = { headers: { Authorization: `Bearer ${token}` } };
-
-  useEffect(() => {
-
-    Promise.all([
-      axios.get(`${API}/menu`),
-      axios.get(`${API}/consumers`, config),
-    ])
-      .then(([m, c]) => {
-        setMenuItems(m.data);
-        setConsumers(c.data);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-
-  }, []);
-
-  // ── MENU CRUD ───────────────────────────────────
-
-  const handleAdd = async (item) => {
-    try {
-
-      const res = await axios.post(
-        `${API}/menu`,
-        item,
-        config
-      );
-
-      setMenuItems((prev) => [
-        ...prev,
-        res.data.item,
-      ]);
-
-    } catch (err) {
-
-      console.error(err);
-
-    }
-  };
-
-  const handleEdit = async (item) => {
-    try {
-
-      const res = await axios.put(
-        `${API}/menu/${item._id}`,
-        item,
-        config
-      );
-
-      setMenuItems((prev) =>
-        prev.map((i) =>
-          i._id === item._id
-            ? res.data.item
-            : i
-        )
-      );
-
-    } catch (err) {
-
-      console.error(err);
-
-    }
-  };
-
-  const handleDelete = async (id) => {
-    try {
-
-      await axios.delete(`${API}/menu/${id}`, config);
-
-      setMenuItems((prev) =>
-        prev.filter((i) => i._id !== id)
-      );
-
-    } catch (err) {
-
-      console.error(err);
-    }
-  };
-
-  // ── CONSUMER CRUD ───────────────────────────────
-  const handleEditConsumer = async (consumer) => {
-    try {
-      const res = await axios.put(
-        `${API}/consumers/${consumer._id}`,
-        consumer,
-        config
-      );
-
-      setConsumers((prev) =>
-        prev.map((c) =>
-          c._id === consumer._id
-            ? res.data.consumer
-            : c
-        )
-      );
-    } catch (err) {
-      console.error(err);
-    }
-  };
-  const handleDeleteConsumer = async (id) => {
-    try {
-
-      await axios.delete(
-        `${API}/consumers/${id}`,
-        config
-      );
-
-      setConsumers((prev) =>
-        prev.filter((c) => c._id !== id)
-      );
-
-    } catch (err) {
-
-      console.error(err);
-
-    }
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("role");
+    window.location.href = "/";
   };
 
   return (
-    <div className="min-h-screen bg-[#141414] px-6 py-8 text-[#FAF7F2]">
-
-      <div className="max-w-6xl mx-auto space-y-8">
-
-        {/* HEADER */}
-        <div>
-
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-[#D4A373] rounded-2xl flex items-center justify-center text-[#141414] shadow-lg">
-            <Utensils size={24} />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-[#FAF7F2]">
-              Admin Dashboard
-            </h1>
-            <p className="text-[#C2B59B] text-sm">
-              Manage your restaurant's digital presence
-            </p>
-          </div>
+    <div className="min-h-screen bg-[#141414] flex text-[#FAF7F2]">
+      
+      {/* SIDEBAR */}
+      <aside className="w-64 flex-shrink-0 border-r border-[#3A2E24] bg-[#1E1E1E]/50 flex flex-col h-[calc(100vh-80px)] sticky top-20">
+        <div className="p-6">
+          <h2 className="text-[#D4A373] text-xs font-bold uppercase tracking-[0.2em] mb-4">
+            Admin Panel
+          </h2>
+          <nav className="space-y-2">
+            {adminLinks.map((link) => {
+              const Icon = link.icon;
+              return (
+                <NavLink
+                  key={link.name}
+                  to={`/dashboard/${link.path}`}
+                  end={link.path === ""}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
+                      isActive
+                        ? "bg-[#D4A373] text-[#141414] shadow-md shadow-[#D4A373]/20"
+                        : "text-[#C2B59B] hover:text-[#FAF7F2] hover:bg-[#2A2A2A]"
+                    }`
+                  }
+                >
+                  <Icon size={18} />
+                  {link.name}
+                </NavLink>
+              );
+            })}
+          </nav>
         </div>
-
-          <div className="mt-3 w-20 h-1 rounded-full bg-gradient-to-r from-[#D4A373] to-[#8B5E3C]" />
-
+        
+        <div className="mt-auto p-6 border-t border-[#3A2E24]">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition"
+          >
+            <LogOut size={16} />
+            Logout
+          </button>
         </div>
+      </aside>
 
-        {/* STATS */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-
-          <StatCard
-            icon={Utensils}
-            label="Total Menu Items"
-            value={loading ? "—" : menuItems.length}
-          />
-
-          <StatCard
-            icon={Clock}
-            label="Operating Hours"
-            value="11 AM - 10 PM"
-          />
-
-          <StatCard
-            icon={Users}
-            label="Registered Consumers"
-            value={loading ? "—" : consumers.length}
-          />
-
-        </div>
-
-        {/* MENU */}
-        <div className="bg-[#1E1E1E] rounded-2xl shadow-xl border border-[#3A2E24] p-6 relative overflow-hidden before:absolute before:top-0 before:left-0 before:right-0 before:h-1 before:bg-gradient-to-r before:from-[#D4A373] before:to-[#8B5E3C]">
-
-          <div className="flex items-center justify-between mb-6">
-
-            <h2 className="text-xl font-bold">
-              Menu Items
-            </h2>
-
-            <button
-              onClick={() => setShowModal(true)}
-              className="flex items-center gap-2 bg-[#D4A373] hover:bg-[#8B5E3C] text-[#141414] text-sm font-semibold px-4 py-2.5 rounded-xl transition"
-            >
-              <Plus size={16} />
-              Add Item
-            </button>
-
-          </div>
-
-          {loading ? (
-            <p className="text-center text-[#C2B59B] py-10">
-              Loading...
-            </p>
-          ) : menuItems.length === 0 ? (
-            <p className="text-center text-[#C2B59B] py-10">
-              No items found
-            </p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-
-              {menuItems.map((item) => (
-                <MenuItemCard
-                  key={item._id}
-                  item={item}
-                  onEdit={setEditItem}
-                  onDelete={handleDelete}
-                />
-              ))}
-
-            </div>
-          )}
-
-        </div>
-        {/* CONSUMERS */}
-        <div className="bg-[#1E1E1E] rounded-2xl shadow-xl border border-[#3A2E24] overflow-hidden relative before:absolute before:top-0 before:left-0 before:right-0 before:h-1 before:bg-gradient-to-r before:from-[#D4A373] before:to-[#8B5E3C]">
-
-          <div className="px-6 py-5 border-b border-[#3A2E24]">
-
-            <h2 className="text-xl font-bold">
-              Registered Consumers
-            </h2>
-          </div>
-          <div className="overflow-x-auto">
-
-            <table className="w-full text-sm">
-
-              <thead className="bg-[#2A2A2A]">
-
-                <tr>
-
-                  {["Name", "Email", "Phone", "Actions"].map((h) => (
-                    <th
-                      key={h}
-                      className="px-6 py-3 text-left text-xs font-semibold text-[#D4A373] uppercase tracking-wider"
-                    >
-                      {h}
-                    </th>
-                  ))}
-
-                </tr>
-
-              </thead>
-
-              <tbody className="divide-y divide-[#3A2E24]">
-
-                {loading ? (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="px-6 py-8 text-center text-[#C2B59B]"
-                    >
-                      Loading...
-                    </td>
-                  </tr>
-                ) : consumers.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="px-6 py-8 text-center text-[#C2B59B]"
-                    >
-                      No consumers registered
-                    </td>
-                  </tr>
-                ) : (
-                  consumers.map((c) => (
-                    <tr
-                      key={c._id}
-                      className="hover:bg-[#2A2A2A] transition"
-                    >
-
-                      <td className="px-6 py-4 font-medium">
-                        {c.name}
-                      </td>
-
-                      <td className="px-6 py-4 text-[#C2B59B]">
-                        {c.email}
-                      </td>
-
-                      <td className="px-6 py-4">
-                        {c.phone}
-                      </td>
-
-                      <td className="px-6 py-4">
-
-                        <div className="flex gap-3">
-
-                          <button
-                            onClick={() =>
-                              setEditConsumer(c)
-                            }
-                            className="text-[#D4A373] hover:text-white"
-                          >
-                            <Pencil size={16} />
-                          </button>
-
-                          <button
-                            onClick={() =>
-                              handleDeleteConsumer(c._id)
-                            }
-                            className="text-red-400 hover:text-red-500"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-
-                        </div>
-
-                      </td>
-
-                    </tr>
-                  ))
-                )}
-
-              </tbody>
-
-            </table>
-
-          </div>
-        </div>
-      </div>
-
-      {/* ADD MENU MODAL */}
-      {showModal && (
-        <ItemModal
-          onClose={() => setShowModal(false)}
-          onSubmit={handleAdd}
-        />
-      )}
-
-      {/* EDIT MENU MODAL */}
-      {editItem && (
-        <ItemModal
-          initial={editItem}
-          onClose={() => setEditItem(null)}
-          onSubmit={(updated) =>
-            handleEdit({
-              ...editItem,
-              ...updated,
-            })
-          }
-        />
-      )}
-
-      {/* EDIT CONSUMER MODAL */}
-      {editConsumer && (
-        <ConsumerModal
-          initial={editConsumer}
-          onClose={() => setEditConsumer(null)}
-          onSubmit={handleEditConsumer}
-        />
-      )}
+      {/* MAIN CONTENT AREA */}
+      <main className="flex-1 p-8 overflow-y-auto">
+        <Routes>
+          <Route path="/" element={<Overview />} />
+          <Route path="/users" element={<UserManagement />} />
+          <Route path="/roles" element={<RoleManagement />} />
+          <Route path="/menus" element={<MenuManagement />} />
+          <Route path="/permissions" element={<RolePermissions />} />
+          <Route path="/audit" element={<AuditLogs />} />
+          <Route path="/settings" element={<ProfileSettings />} /> 
+          <Route path="*" element={<Navigate to="" replace />} />
+        </Routes>
+      </main>
 
     </div>
   );

@@ -76,3 +76,45 @@ exports.deleteRole = async (req, res) => {
     res.status(500).json({ message: "Something went wrong" });
   }
 };
+
+exports.getRolePermissions = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const mappings = await RoleMenuMapping.find({ role: id }).populate("navMenu");
+    res.json(mappings);
+  } catch (err) {
+    res.status(500).json({ message: "Something went wrong" });
+  }
+};
+
+exports.updateRolePermissions = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { permissions } = req.body; // array of { navMenuId, canView, canEdit }
+
+    if (!Array.isArray(permissions)) {
+      return res.status(400).json({ message: "Permissions must be an array" });
+    }
+
+    const role = await Role.findById(id);
+    if (!role) return res.status(404).json({ message: "Role not found" });
+
+    // We can just wipe and recreate, or update. Wiping is easier for a full sync.
+    await RoleMenuMapping.deleteMany({ role: id });
+
+    const newMappings = permissions.map(p => ({
+      role: id,
+      navMenu: p.navMenuId,
+      canView: p.canView,
+      canEdit: p.canEdit
+    }));
+
+    await RoleMenuMapping.insertMany(newMappings);
+
+    await logAction(req.user.id, "UPDATE_ROLE_PERMISSIONS", id, null, { newMappings });
+    
+    res.json({ message: "Permissions updated successfully" });
+  } catch (err) {
+    res.status(500).json({ message: "Something went wrong" });
+  }
+};
