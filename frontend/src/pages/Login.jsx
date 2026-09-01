@@ -38,8 +38,13 @@ export default function Login({ setToken }) {
       } else {
         toast.success("Welcome back");
       }
-
-      navigate("/dashboard");
+      if (actualRole?.toLowerCase() === "manager") {
+        navigate("/manager");
+      } else if (actualRole?.toLowerCase() === "admin") {
+        navigate("/dashboard");
+      } else {
+        navigate("/");
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || "Login failed");
     } finally {

@@ -4,6 +4,7 @@ import Home from "./pages/Home";
 import Menu from "./pages/Menu";
 import ConsumerForm from "./pages/ConsumerForm";
 import Dashboard from "./pages/Dashboard";
+import ManagerDashboard from "./pages/ManagerDashboard";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 
@@ -35,12 +36,22 @@ function App() {
             <Route path="/login" element={<Login setToken={setToken} />} />
             <Route path="/signup" element={<SignUp setToken={setToken} />} />
 
-            {/* PROTECTED ROUTE */}
+            {/* ADMIN PROTECTED ROUTE */}
             <Route
               path="/dashboard/*"
               element={
                 <ProtectedRoute token={token} allowedRoles={["admin"]}>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* MANAGER PROTECTED ROUTE */}
+            <Route
+              path="/manager/*"
+              element={
+                <ProtectedRoute token={token} allowedRoles={["manager", "admin"]}>
+                  <ManagerDashboard />
                 </ProtectedRoute>
               }
             />

@@ -54,6 +54,12 @@ export default function Navbar({ token, setToken }) {
       icon: LayoutDashboard,
       roles: ["admin"], 
     },
+    {
+      name: "Manager Dashboard",
+      path: "/manager",
+      icon: Briefcase,
+      roles: ["manager", "admin"],
+    },
   ];
 
   const staticFiltered = links.filter(
@@ -89,8 +95,11 @@ export default function Navbar({ token, setToken }) {
         <div className="flex items-center gap-2 bg-[#1E1E1E] border border-[#3A2E24] p-1.5 rounded-full">
           {staticFiltered.map((link) => {
             const Icon = link.icon;
-            // For dashboard, we might be on a sub-route like /dashboard/users
-            const isActive = location.pathname === link.path || (link.path === '/dashboard' && location.pathname.startsWith('/dashboard'));
+            // For dashboard & manager, handle active sub-routes
+            const isActive =
+              location.pathname === link.path ||
+              (link.path === "/dashboard" && location.pathname.startsWith("/dashboard")) ||
+              (link.path === "/manager" && location.pathname.startsWith("/manager"));
             
             return (
               <NavLink

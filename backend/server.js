@@ -59,6 +59,7 @@ app.use("/api/roles", require("./routes/roles"));
 app.use("/api/users", require("./routes/users"));
 app.use("/api/nav-menu", require("./routes/navMenu"));
 app.use("/api/admin", require("./routes/admin"));
+app.use("/api/manager", require("./routes/manager"));
 
 // Home Route
 app.get("/", (req, res) => {
