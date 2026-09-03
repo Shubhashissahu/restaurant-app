@@ -14,10 +14,24 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) {
+    const status = err.response?.status;
+    const msg = err.response?.data?.message?.toLowerCase() || "";
+
+    if (
+      status === 401 ||
+      (status === 403 && (msg.includes("token") || msg.includes("expired") || msg.includes("access required")))
+    ) {
+      // Clear expired credentials
       localStorage.removeItem("token");
       localStorage.removeItem("role");
-      window.location.href = "/login";
+
+      // Only redirect if not already on login or signup
+      if (
+        !window.location.pathname.startsWith("/login") &&
+        !window.location.pathname.startsWith("/signup")
+      ) {
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(err);
   }
