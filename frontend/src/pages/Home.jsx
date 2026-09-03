@@ -1,5 +1,5 @@
 // pages/Home.jsx
-import Hero from "../components/Hero";
+import Hero from "../components/hero";
 import Menu from "../components/Menu";
 import Info from "../components/Info";
 

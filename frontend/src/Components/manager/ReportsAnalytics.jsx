@@ -45,7 +45,7 @@ export default function ReportsAnalytics() {
     if (!data) return;
 
     const rows = [
-      ["SAVORY BITES - MANAGER OPERATIONS & REVENUE REPORT"],
+      ["TASTEHUB - MANAGER OPERATIONS & REVENUE REPORT"],
       [`Generated on: ${new Date().toLocaleString()}`],
       [`Timeframe: ${range}`],
       [],
@@ -83,7 +83,7 @@ export default function ReportsAnalytics() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `savory_bites_report_${range}_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute("download", `tastehub_report_${range}_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

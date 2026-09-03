@@ -1,14 +1,27 @@
 // src/components/Hero.jsx
 
 import { ArrowRight, Award } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function Hero() {
+  const navigate = useNavigate();
+
+  const handleViewMenu = (e) => {
+    if (e) e.preventDefault();
+    const menuEl = document.getElementById("featured-menu") || document.getElementById("menu");
+    if (menuEl) {
+      menuEl.scrollIntoView({ behavior: "smooth" });
+    } else {
+      navigate("/menu");
+    }
+  };
+
   return (
     <section className="relative h-[92vh] min-h-[620px] flex items-center overflow-hidden bg-[#141414]">
 
       {/* ── BACKGROUND IMAGE ── */}
       <div
-        className="absolute inset-0 bg-cover bg-center scale-105"
+        className="absolute inset-0 bg-cover bg-center scale-105 pointer-events-none"
         style={{
           backgroundImage:
             "url('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1600&q=80')",
@@ -16,15 +29,15 @@ export default function Hero() {
       />
 
       {/* ── CINEMATIC OVERLAY ── */}
-      <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/70 to-black/40" />
+      <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/70 to-black/40 pointer-events-none" />
 
       {/* ── GOLD AMBIENT GLOW ── */}
-      <div className="absolute top-20 left-20 w-72 h-72 bg-[#D4A373]/10 blur-3xl rounded-full"></div>
+      <div className="absolute top-20 left-20 w-72 h-72 bg-[#D4A373]/10 blur-3xl rounded-full pointer-events-none"></div>
 
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-[#8B5E3C]/10 blur-3xl rounded-full"></div>
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-[#8B5E3C]/10 blur-3xl rounded-full pointer-events-none"></div>
 
       {/* ── CONTENT ── */}
-      <div className="relative z-10 max-w-7xl mx-auto px-8 w-full">
+      <div className="relative z-20 max-w-7xl mx-auto px-8 w-full">
 
         <div className="max-w-2xl">
 
@@ -60,7 +73,10 @@ export default function Hero() {
           <div className="flex flex-wrap gap-5">
 
             {/* PRIMARY BUTTON */}
-            <button className="group flex items-center gap-3 bg-[#D4A373] hover:bg-[#8B5E3C] active:scale-95 text-[#141414] font-semibold px-8 py-4 rounded-2xl shadow-2xl transition-all duration-300">
+            <button
+              onClick={handleViewMenu}
+              className="group flex items-center gap-3 bg-[#D4A373] hover:bg-[#8B5E3C] active:scale-95 text-[#141414] font-semibold px-8 py-4 rounded-2xl shadow-2xl transition-all duration-300 cursor-pointer relative z-30"
+            >
 
               View Menu
 
@@ -72,7 +88,10 @@ export default function Hero() {
             </button>
 
             {/* SECONDARY BUTTON */}
-            <button className="border border-[#D4A373]/50 hover:border-[#D4A373] text-[#FAF7F2] font-semibold px-8 py-4 rounded-2xl hover:bg-[#D4A373]/10 active:scale-95 backdrop-blur-sm transition-all duration-300">
+            <button
+              onClick={() => navigate("/register")}
+              className="border border-[#D4A373]/50 hover:border-[#D4A373] text-[#FAF7F2] font-semibold px-8 py-4 rounded-2xl hover:bg-[#D4A373]/10 active:scale-95 backdrop-blur-sm transition-all duration-300 cursor-pointer"
+            >
 
               Reserve Table
 
@@ -119,7 +138,7 @@ export default function Hero() {
       </div>
 
       {/* ── BOTTOM FADE ── */}
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#141414] to-transparent"></div>
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#141414] to-transparent pointer-events-none z-10"></div>
 
     </section>
   );

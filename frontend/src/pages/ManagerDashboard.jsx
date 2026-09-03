@@ -97,7 +97,7 @@ export default function ManagerDashboard() {
               <ChefHat size={16} />
             </div>
             <div className="leading-tight">
-              <p className="text-xs font-semibold text-[#FAF7F2]">Savory Bites</p>
+              <p className="text-xs font-semibold text-[#FAF7F2]">TasteHub</p>
               <p className="text-[10px] text-[#8B7E6A]">Store Operations</p>
             </div>
           </div>

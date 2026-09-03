@@ -3,7 +3,9 @@
 import {
   Plus,
   Star,
+  ArrowRight,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const menuItems = [
   {
@@ -56,8 +58,11 @@ const menuItems = [
 ];
 
 export default function Menu() {
+  const navigate = useNavigate();
+
   return (
-    <section className="relative py-32 bg-[#141414] overflow-hidden">
+    <section id="featured-menu" className="relative py-32 bg-[#141414] overflow-hidden">
+      <div id="menu" className="absolute -top-20 pointer-events-none" />
 
       {/* AMBIENT LIGHTS */}
       <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-[#D4A373]/10 blur-3xl rounded-full"></div>
@@ -207,6 +212,20 @@ export default function Menu() {
             </div>
           ))}
 
+        </div>
+
+        {/* EXPLORE FULL MENU CTA */}
+        <div className="text-center mt-16">
+          <button
+            onClick={() => navigate("/menu")}
+            className="inline-flex items-center gap-3 bg-[#1E1E1E] hover:bg-[#D4A373] text-[#FAF7F2] hover:text-[#141414] border border-[#3A2E24] hover:border-[#D4A373] font-semibold px-8 py-4 rounded-2xl transition-all duration-300 shadow-xl cursor-pointer group"
+          >
+            <span>Explore Complete Menu & Specials</span>
+            <ArrowRight
+              size={18}
+              className="group-hover:translate-x-1 transition-transform duration-300"
+            />
+          </button>
         </div>
 
       </div>

@@ -24,7 +24,7 @@ export default function Footer() {
         {/* BRAND */}
         <div>
           <h2 className="text-3xl font-bold text-[#FAF7F2] mb-4 tracking-wide">
-            Savory Bites
+            TasteHub
           </h2>
 
           <div className="w-16 h-1 rounded-full bg-gradient-to-r from-[#D4A373] to-[#8B5E3C] mb-4"></div>
@@ -92,7 +92,7 @@ export default function Footer() {
 
             <p className="flex items-center gap-3 hover:text-[#D4A373] transition duration-300">
               <Mail size={16} className="text-[#D4A373]" />
-              support@savorybites.com
+              support@tastehub.com
             </p>
 
             <p className="flex items-center gap-3 hover:text-[#D4A373] transition duration-300">
@@ -137,7 +137,7 @@ export default function Footer() {
 
       {/* BOTTOM BAR */}
       <div className="relative border-t border-[#3A2E24] text-center py-5 text-sm text-[#8B7E6A] bg-[#111111]">
-        © {new Date().getFullYear()} Savory Bites — All rights reserved
+        © {new Date().getFullYear()} TasteHub — All rights reserved
       </div>
 
     </footer>

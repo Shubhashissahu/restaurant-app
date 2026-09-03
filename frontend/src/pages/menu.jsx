@@ -369,7 +369,7 @@ export default function Menu() {
   return (
     <>
       <Helmet>
-        <title>Menu | Our Restaurant</title>
+        <title>Menu | TasteHub</title>
 
         <meta
           name="description"

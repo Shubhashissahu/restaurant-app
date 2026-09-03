@@ -191,7 +191,7 @@ export default function ManagerProfile() {
                 type="email"
                 required
                 className={INPUT_STYLE}
-                placeholder="manager@savorybites.com"
+                placeholder="manager@tastehub.com"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
               />

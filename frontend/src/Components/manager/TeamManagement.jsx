@@ -106,7 +106,7 @@ function MemberModal({ initial, onClose, onSubmit }) {
                 type="email"
                 required
                 className={INPUT_STYLE}
-                placeholder="staff@savorybites.com"
+                placeholder="staff@tastehub.com"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
               />
