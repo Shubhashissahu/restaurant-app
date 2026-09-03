@@ -7,12 +7,30 @@ export default function ProtectedRoute({ children, allowedRoles }) {
 
   if (token) {
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      if (payload.role) {
-        role = payload.role.toLowerCase();
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(atob(parts[1]));
+        
+        // Check if token has expired
+        if (payload.exp && Date.now() >= payload.exp * 1000) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("role");
+          return <Navigate to="/login" replace />;
+        }
+
+        if (payload.role) {
+          role = payload.role.toLowerCase();
+        }
+      } else {
+        localStorage.removeItem("token");
+        localStorage.removeItem("role");
+        return <Navigate to="/login" replace />;
       }
     } catch (e) {
       console.error("Failed to parse token", e);
+      localStorage.removeItem("token");
+      localStorage.removeItem("role");
+      return <Navigate to="/login" replace />;
     }
   }
 

@@ -6,6 +6,7 @@ const isAdmin = require("../middleware/isAdmin");
 
 router.get("/stats", auth, isAdmin, ctrl.getStats);
 router.get("/audit-logs", auth, isAdmin, ctrl.getAuditLogs);
+router.get("/profile", auth, isAdmin, ctrl.getProfile);
 router.put("/profile", auth, isAdmin, ctrl.updateProfile);
 
 module.exports = router;

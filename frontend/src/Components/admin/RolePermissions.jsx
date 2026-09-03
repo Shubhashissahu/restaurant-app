@@ -1,10 +1,7 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../../services/api";
 import toast from "react-hot-toast";
-import { Check, X, Shield } from "lucide-react";
-
-const API = "http://localhost:5000/api";
-const config = { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } };
+import { Check, X, Shield, RotateCw, Save } from "lucide-react";
 
 export default function RolePermissions() {
   const [roles, setRoles] = useState([]);
@@ -15,69 +12,72 @@ export default function RolePermissions() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    Promise.all([
-      axios.get(`${API}/roles`, config),
-      axios.get(`${API}/nav-menu`, config)
-    ]).then(([rRes, mRes]) => {
-      setRoles(rRes.data);
-      setMenus(mRes.data);
-      if (rRes.data.length > 0) {
-        setSelectedRoleId(rRes.data[0]._id);
-      }
-    }).catch(err => toast.error("Failed to fetch initial data"))
+    Promise.allSettled([api.get("/roles"), api.get("/nav-menu")])
+      .then(([rRes, mRes]) => {
+        if (rRes.status === "fulfilled" && Array.isArray(rRes.value.data)) {
+          setRoles(rRes.value.data);
+          if (rRes.value.data.length > 0) {
+            setSelectedRoleId(rRes.value.data[0]._id);
+          }
+        }
+        if (mRes.status === "fulfilled" && Array.isArray(mRes.value.data)) {
+          setMenus(mRes.value.data);
+        }
+      })
+      .catch(() => toast.error("Failed to fetch permission data"))
       .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
     if (!selectedRoleId) return;
-    
-    // Reset permissions
+
     const defaultPerms = {};
-    menus.forEach(m => {
+    menus.forEach((m) => {
       defaultPerms[m._id] = { canView: false, canEdit: false };
     });
     setPermissions(defaultPerms);
 
-    // Fetch active permissions for role
-    axios.get(`${API}/roles/${selectedRoleId}/permissions`, config)
-      .then(res => {
+    api
+      .get(`/roles/${selectedRoleId}/permissions`)
+      .then((res) => {
         const newPerms = { ...defaultPerms };
-        res.data.forEach(mapping => {
-          if (mapping.navMenu) {
-            newPerms[mapping.navMenu._id] = {
-              canView: mapping.canView,
-              canEdit: mapping.canEdit
-            };
-          }
-        });
+        if (Array.isArray(res.data)) {
+          res.data.forEach((mapping) => {
+            if (mapping.navMenu) {
+              newPerms[mapping.navMenu._id] = {
+                canView: Boolean(mapping.canView),
+                canEdit: Boolean(mapping.canEdit),
+              };
+            }
+          });
+        }
         setPermissions(newPerms);
       })
-      .catch(err => toast.error("Failed to fetch role permissions"));
+      .catch(() => toast.error("Failed to fetch role permissions"));
   }, [selectedRoleId, menus]);
 
   const handleToggle = (menuId, field) => {
-    setPermissions(prev => ({
+    setPermissions((prev) => ({
       ...prev,
       [menuId]: {
         ...prev[menuId],
-        [field]: !prev[menuId][field]
-      }
+        [field]: !prev[menuId]?.[field],
+      },
     }));
   };
 
   const handleSave = async () => {
     setSaving(true);
-    // Convert object to array for API
     const payload = Object.keys(permissions)
-      .filter(menuId => permissions[menuId].canView || permissions[menuId].canEdit)
-      .map(menuId => ({
+      .filter((menuId) => permissions[menuId].canView || permissions[menuId].canEdit)
+      .map((menuId) => ({
         navMenuId: menuId,
         canView: permissions[menuId].canView,
-        canEdit: permissions[menuId].canEdit
+        canEdit: permissions[menuId].canEdit,
       }));
 
     try {
-      await axios.put(`${API}/roles/${selectedRoleId}/permissions`, { permissions: payload }, config);
+      await api.put(`/roles/${selectedRoleId}/permissions`, { permissions: payload });
       toast.success("Permissions updated successfully");
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to update permissions");
@@ -86,101 +86,120 @@ export default function RolePermissions() {
     }
   };
 
-  // Build hierarchy tree for display
   const buildTree = (menusList, parentId = null) => {
     return menusList
-      .filter(m => m.parentId === parentId)
+      .filter((m) => m.parentId === parentId)
       .sort((a, b) => a.order - b.order)
-      .map(m => ({ ...m, children: buildTree(menusList, m._id) }));
+      .map((m) => ({ ...m, children: buildTree(menusList, m._id) }));
   };
 
   const tree = buildTree(menus);
 
   const renderTree = (nodes, depth = 0) => {
-    return nodes.map(node => (
+    return nodes.map((node) => (
       <div key={node._id} className="w-full">
-        <div className={`flex items-center justify-between py-3 px-4 hover:bg-[#2A2A2A]/50 transition border-b border-[#3A2E24]/50 ${depth === 0 ? 'bg-[#1E1E1E]' : ''}`}>
+        <div
+          className={`flex items-center justify-between py-3.5 px-6 hover:bg-[#2A2A2A]/50 transition border-b border-[#3A2E24]/60 ${
+            depth === 0 ? "bg-[#1E1E1E]" : ""
+          }`}
+        >
           <div className="flex items-center gap-3" style={{ paddingLeft: `${depth * 24}px` }}>
-            <span className="font-semibold text-[#FAF7F2]">{node.name}</span>
+            <span className="font-semibold text-[#FAF7F2] text-sm">{node.name}</span>
+            <span className="text-xs text-[#8B7E6A] font-mono">{node.path}</span>
           </div>
-          
-          <div className="flex items-center gap-8 mr-4">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input 
-                type="checkbox" 
-                className="w-4 h-4 accent-[#D4A373] bg-[#2A2A2A] border-[#3A2E24] rounded focus:ring-[#D4A373]" 
-                checked={permissions[node._id]?.canView || false}
-                onChange={() => handleToggle(node._id, 'canView')}
+
+          <div className="flex items-center gap-6 mr-2">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                className="w-4 h-4 rounded accent-[#D4A373] bg-[#2A2A2A] border-[#3A2E24]"
+                checked={Boolean(permissions[node._id]?.canView)}
+                onChange={() => handleToggle(node._id, "canView")}
               />
-              <span className="text-sm text-[#C2B59B]">Can View</span>
+              <span className="text-xs text-[#C2B59B]">Can View</span>
             </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input 
-                type="checkbox" 
-                className="w-4 h-4 accent-[#D4A373] bg-[#2A2A2A] border-[#3A2E24] rounded focus:ring-[#D4A373]" 
-                checked={permissions[node._id]?.canEdit || false}
-                onChange={() => handleToggle(node._id, 'canEdit')}
+
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                className="w-4 h-4 rounded accent-[#D4A373] bg-[#2A2A2A] border-[#3A2E24]"
+                checked={Boolean(permissions[node._id]?.canEdit)}
+                onChange={() => handleToggle(node._id, "canEdit")}
               />
-              <span className="text-sm text-[#C2B59B]">Can Edit</span>
+              <span className="text-xs text-[#C2B59B]">Can Edit</span>
             </label>
           </div>
         </div>
-        {node.children.length > 0 && (
-          <div className="w-full">
-            {renderTree(node.children, depth + 1)}
-          </div>
-        )}
+
+        {node.children.length > 0 && <div className="w-full">{renderTree(node.children, depth + 1)}</div>}
       </div>
     ));
   };
 
-  if (loading) return <div className="text-center p-10">Loading...</div>;
+  if (loading) {
+    return (
+      <div className="p-16 text-center text-[#C2B59B] text-sm">
+        <RotateCw size={24} className="animate-spin mx-auto text-[#D4A373] mb-2" />
+        Loading access matrix...
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Role Permissions</h1>
-        <button 
+    <div className="space-y-6 animate-in fade-in duration-300">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#3A2E24]">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-[#FAF7F2]">Role Permissions</h1>
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#D4A373]/10 text-[#D4A373] border border-[#D4A373]/30 font-semibold">
+              Matrix View
+            </span>
+          </div>
+          <p className="text-xs text-[#C2B59B]">Configure route views and editing permissions per user role</p>
+        </div>
+
+        <button
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center gap-2 bg-[#D4A373] hover:bg-[#8B5E3C] disabled:opacity-50 text-[#141414] text-sm font-semibold px-6 py-2 rounded-xl transition"
+          className="flex items-center gap-2 bg-[#D4A373] hover:bg-[#8B5E3C] text-[#141414] hover:text-[#FAF7F2] text-xs font-semibold px-5 py-2 rounded-xl transition shadow-md shadow-[#D4A373]/20 disabled:opacity-50"
         >
-          <Shield size={16} /> {saving ? "Saving..." : "Save Permissions"}
+          <Save size={15} /> {saving ? "Saving..." : "Save Permissions"}
         </button>
       </div>
 
-      <div className="flex gap-6">
-        {/* Roles Sidebar */}
-        <div className="w-64 flex-shrink-0 space-y-2">
-          <h2 className="text-sm font-bold text-[#C2B59B] uppercase mb-4">Select Role</h2>
-          {roles.map(r => (
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Roles List */}
+        <div className="w-full lg:w-64 flex-shrink-0 space-y-2">
+          <h2 className="text-xs font-bold text-[#C2B59B] uppercase tracking-wider mb-3">Select Role</h2>
+          {roles.map((r) => (
             <button
               key={r._id}
               onClick={() => setSelectedRoleId(r._id)}
-              className={`w-full text-left px-4 py-3 rounded-xl text-sm font-semibold transition-all capitalize ${
+              className={`w-full text-left px-4 py-3 rounded-xl text-sm font-semibold transition-all capitalize flex items-center justify-between ${
                 selectedRoleId === r._id
-                  ? "bg-[#D4A373] text-[#141414]"
+                  ? "bg-[#D4A373] text-[#141414] font-bold shadow-md shadow-[#D4A373]/20"
                   : "bg-[#1E1E1E] text-[#C2B59B] hover:text-[#FAF7F2] hover:bg-[#2A2A2A] border border-[#3A2E24]"
               }`}
             >
-              {r.name}
+              <span>{r.name}</span>
+              <Shield size={14} className={selectedRoleId === r._id ? "text-[#141414]" : "text-[#8B7E6A]"} />
             </button>
           ))}
         </div>
 
-        {/* Permissions Matrix */}
-        <div className="flex-1 bg-[#1E1E1E] rounded-2xl border border-[#3A2E24] overflow-hidden">
-          <div className="px-6 py-4 border-b border-[#3A2E24] bg-[#2A2A2A]">
-            <h2 className="text-sm font-bold text-[#D4A373] uppercase tracking-wider">
+        {/* Permissions Grid */}
+        <div className="flex-1 rounded-2xl bg-[#1E1E1E] border border-[#3A2E24] overflow-hidden shadow-xl relative before:absolute before:top-0 before:left-0 before:right-0 before:h-1 before:bg-gradient-to-r before:from-[#D4A373] before:to-[#8B5E3C]">
+          <div className="px-6 py-4 border-b border-[#3A2E24] bg-[#2A2A2A] flex items-center justify-between">
+            <h2 className="text-xs font-bold text-[#D4A373] uppercase tracking-wider">
               Menu Access Configuration
             </h2>
+            <span className="text-[11px] text-[#C2B59B]">Can View / Can Edit</span>
           </div>
+
           {tree.length === 0 ? (
-            <div className="p-6 text-center text-[#C2B59B]">No menus available</div>
+            <div className="p-12 text-center text-[#C2B59B]">No menus available.</div>
           ) : (
-            <div className="flex flex-col">
-              {renderTree(tree)}
-            </div>
+            <div className="flex flex-col divide-y divide-[#3A2E24]/60">{renderTree(tree)}</div>
           )}
         </div>
       </div>

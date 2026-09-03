@@ -28,6 +28,9 @@ export default function Login({ setToken }) {
 
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("role", actualRole || "");
+      if (res.data.admin?.name) {
+        localStorage.setItem("userName", res.data.admin.name);
+      }
 
       if (setToken) setToken(res.data.token);
 

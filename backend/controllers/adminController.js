@@ -3,6 +3,7 @@ const Role = require("../models/Role");
 const NavMenu = require("../models/NavMenu");
 const AuditLog = require("../models/AuditLog");
 const Consumer = require("../models/Consumer");
+const MenuItem = require("../models/MenuItem");
 const bcrypt = require("bcrypt");
 
 exports.getStats = async (req, res) => {
@@ -11,8 +12,9 @@ exports.getStats = async (req, res) => {
     const activeUsers = await Admin.countDocuments({ isActive: true });
     const totalRoles = await Role.countDocuments();
     const totalMenus = await NavMenu.countDocuments();
-    const activeMenus = await NavMenu.countDocuments({ isActive: true });
+    const activeMenus = await NavMenu.countDocuments({ isActive: { $ne: false } });
     const totalConsumers = await Consumer.countDocuments();
+    const totalMenuItems = await MenuItem.countDocuments();
 
     res.json({
       totalUsers,
@@ -20,8 +22,19 @@ exports.getStats = async (req, res) => {
       totalRoles,
       totalMenus,
       activeMenus,
-      totalConsumers
+      totalConsumers,
+      totalMenuItems
     });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.getProfile = async (req, res) => {
+  try {
+    const user = await Admin.findById(req.user.id).populate("role", "name").select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json(user);
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
