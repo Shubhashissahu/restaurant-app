@@ -1,4 +1,4 @@
-# 🍽️ Savory Bites — Premium Restaurant Management System
+# 🍽️ TasteHub — Premium Restaurant Management System
 
 A modern full-stack restaurant management web application built using the MERN stack. The project provides a premium restaurant-style UI with complete CRUD functionality for menu management and consumer registration.
 

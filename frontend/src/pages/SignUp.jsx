@@ -78,7 +78,7 @@ export default function SignUp({ setToken }) {
             <input
               type="email"
               value={form.email}
-              placeholder="admin@savorybites.com"
+              placeholder="admin@tastehub.com"
               required
               className="w-full mt-1 p-3 rounded-lg bg-[#141414] border border-[#3A2E24] text-[#FAF7F2] focus:border-[#D4A373] outline-none transition"
               onChange={(e) => setForm({ ...form, email: e.target.value })}

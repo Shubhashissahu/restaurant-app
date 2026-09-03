@@ -85,7 +85,7 @@ export default function Navbar({ token, setToken }) {
             </div>
           </div>
           <div className="leading-tight">
-            <h1 className="text-xl font-bold text-[#FAF7F2]">Savory Bites</h1>
+            <h1 className="text-xl font-bold text-[#FAF7F2]">TasteHub</h1>
             <p className="text-xs text-[#D4A373] uppercase tracking-widest">
               Fresh & Delicious
             </p>

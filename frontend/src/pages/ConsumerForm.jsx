@@ -107,7 +107,7 @@ export default function ConsumerForm() {
   return (
     <>
       <Helmet>
-        <title>Register | Savory Bites</title>
+        <title>Register | TasteHub</title>
       </Helmet>
 
       <div className="min-h-screen bg-[#141414] flex items-center justify-center px-4 py-20 relative overflow-hidden">
@@ -128,7 +128,7 @@ export default function ConsumerForm() {
 
             <div className="inline-flex items-center gap-2 bg-[#2A2A2A] border border-[#3A2E24] px-4 py-2 rounded-full text-[#D4A373] text-xs font-bold uppercase tracking-[0.2em] mb-5">
 
-              Join Savory Bites
+              Join TasteHub
 
             </div>
 

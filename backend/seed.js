@@ -26,7 +26,7 @@ const seed = async () => {
     }
 
     // Create default admin user
-    const adminEmail = 'admin@savorybites.com';
+    const adminEmail = 'admin@tastehub.com';
     let admin = await Admin.findOne({ email: adminEmail });
     if (!admin) {
       const hashed = await bcrypt.hash('password123', 10);
@@ -42,7 +42,7 @@ const seed = async () => {
     }
 
     // Create default manager user
-    const managerEmail = 'manager@savorybites.com';
+    const managerEmail = 'manager@tastehub.com';
     let manager = await Admin.findOne({ email: managerEmail });
     if (!manager) {
       const hashed = await bcrypt.hash('password123', 10);
@@ -58,7 +58,7 @@ const seed = async () => {
     }
 
     // Create default user user
-    const userEmail = 'user@savorybites.com';
+    const userEmail = 'user@tastehub.com';
     let user = await Admin.findOne({ email: userEmail });
     if (!user) {
       const hashed = await bcrypt.hash('password123', 10);
