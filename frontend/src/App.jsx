@@ -49,7 +49,7 @@ function AppContent({ token, setToken }) {
           <Route
             path="/dashboard/*"
             element={
-              <ProtectedRoute token={token} allowedRoles={["admin"]}>
+              <ProtectedRoute token={token} setToken={setToken} allowedRoles={["admin"]}>
                 <Dashboard />
               </ProtectedRoute>
             }
@@ -59,7 +59,7 @@ function AppContent({ token, setToken }) {
           <Route
             path="/manager/*"
             element={
-              <ProtectedRoute token={token} allowedRoles={["manager", "admin"]}>
+              <ProtectedRoute token={token} setToken={setToken} allowedRoles={["manager", "admin"]}>
                 <ManagerDashboard />
               </ProtectedRoute>
             }

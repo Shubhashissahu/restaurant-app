@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import api from "../services/api";
 import { useNavigate, Link } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -15,6 +15,37 @@ export default function Login({ setToken }) {
   const [loginAs, setLoginAs] = useState("admin");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  // If already logged in with a valid token, redirect directly to dashboard
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const parts = token.split(".");
+        if (parts.length === 3) {
+          const payload = JSON.parse(atob(parts[1]));
+          if (!payload.exp || Date.now() < payload.exp * 1000) {
+            const role = (payload.role || localStorage.getItem("role") || "").toLowerCase();
+            if (role === "admin") {
+              navigate("/dashboard", { replace: true });
+            } else if (role === "manager") {
+              navigate("/manager", { replace: true });
+            } else {
+              navigate("/", { replace: true });
+            }
+            return;
+          }
+        }
+      } catch (e) {
+        console.error("Invalid token found in Login", e);
+      }
+      // If token is invalid or expired, clear it
+      localStorage.removeItem("token");
+      localStorage.removeItem("role");
+      localStorage.removeItem("userName");
+      if (setToken) setToken(null);
+    }
+  }, [navigate, setToken]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -101,7 +132,7 @@ export default function Login({ setToken }) {
             <input
               type="email"
               value={form.email}
-              placeholder="admin@tastehub.com"
+              placeholder={`${loginAs}@tastehub.com`}
               required
               className="w-full mt-1 p-3 rounded-lg bg-[#141414] border border-[#3A2E24] text-[#FAF7F2] focus:border-[#D4A373] outline-none transition"
               onChange={(e) => setForm({ ...form, email: e.target.value })}

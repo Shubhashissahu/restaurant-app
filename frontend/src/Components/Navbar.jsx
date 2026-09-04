@@ -18,35 +18,50 @@ export default function Navbar({ token, setToken }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  let role = localStorage.getItem("role")?.toLowerCase();
+  let role = null;
 
   if (token) {
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      if (payload.role) {
-        role = payload.role.toLowerCase();
-        localStorage.setItem("role", payload.role);
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(atob(parts[1]));
+        if (payload.exp && Date.now() >= payload.exp * 1000) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("role");
+          localStorage.removeItem("userName");
+          setToken(null);
+        } else {
+          role = (payload.role || localStorage.getItem("role") || "").toLowerCase();
+          if (payload.role) {
+            localStorage.setItem("role", payload.role);
+          }
+        }
       }
     } catch (e) {
       console.error("Failed to parse token for role", e);
+      localStorage.removeItem("token");
+      localStorage.removeItem("role");
+      localStorage.removeItem("userName");
+      setToken(null);
     }
   }
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("role");
+    localStorage.removeItem("userName");
     setToken(null);
-    navigate("/");
+    navigate("/login");
   };
 
   const links = [
     { name: "Home", path: "/", icon: Home },
     { name: "Menu", path: "/menu", icon: Menu },
     { 
-      name: "Register", 
+      name: "Reserve Table", 
       path: "/register", 
       icon: UserPlus,
-      roles: ["admin", "manager"] 
+      hideForRoles: ["admin", "manager"] 
     },
     {
       name: "Admin Dashboard",
@@ -58,13 +73,19 @@ export default function Navbar({ token, setToken }) {
       name: "Manager Dashboard",
       path: "/manager",
       icon: Briefcase,
-      roles: ["manager", "admin"],
+      roles: ["manager"],
     },
   ];
 
-  const staticFiltered = links.filter(
-    (link) => !link.roles || link.roles.includes(role)
-  );
+  const staticFiltered = links.filter((link) => {
+    if (link.hideForRoles && role && link.hideForRoles.includes(role)) {
+      return false;
+    }
+    if (link.roles) {
+      return link.roles.includes(role);
+    }
+    return true;
+  });
 
   const getRoleIcon = () => {
     if (role === "admin") return <ShieldAlert size={16} className="text-red-400" />;

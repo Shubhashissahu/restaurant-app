@@ -1,7 +1,7 @@
 //src/components/ProtectedRoute
 import { Navigate } from "react-router-dom";
 
-export default function ProtectedRoute({ children, allowedRoles }) {
+export default function ProtectedRoute({ children, allowedRoles, setToken }) {
   const token = localStorage.getItem("token");
   let role = localStorage.getItem("role")?.toLowerCase();
 
@@ -15,6 +15,8 @@ export default function ProtectedRoute({ children, allowedRoles }) {
         if (payload.exp && Date.now() >= payload.exp * 1000) {
           localStorage.removeItem("token");
           localStorage.removeItem("role");
+          localStorage.removeItem("userName");
+          if (setToken) setToken(null);
           return <Navigate to="/login" replace />;
         }
 
@@ -24,17 +26,22 @@ export default function ProtectedRoute({ children, allowedRoles }) {
       } else {
         localStorage.removeItem("token");
         localStorage.removeItem("role");
+        localStorage.removeItem("userName");
+        if (setToken) setToken(null);
         return <Navigate to="/login" replace />;
       }
     } catch (e) {
       console.error("Failed to parse token", e);
       localStorage.removeItem("token");
       localStorage.removeItem("role");
+      localStorage.removeItem("userName");
+      if (setToken) setToken(null);
       return <Navigate to="/login" replace />;
     }
   }
 
   if (!token) {
+    if (setToken) setToken(null);
     return <Navigate to="/login" replace />;
   }
 
