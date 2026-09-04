@@ -24,6 +24,7 @@ api.interceptors.response.use(
       // Clear expired credentials
       localStorage.removeItem("token");
       localStorage.removeItem("role");
+      localStorage.removeItem("userName");
 
       // Only redirect if not already on login or signup
       if (

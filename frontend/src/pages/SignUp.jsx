@@ -11,6 +11,30 @@ export default function SignUp({ setToken }) {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // If already logged in, redirect directly to dashboard
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const parts = token.split(".");
+        if (parts.length === 3) {
+          const payload = JSON.parse(atob(parts[1]));
+          if (!payload.exp || Date.now() < payload.exp * 1000) {
+            const role = (payload.role || localStorage.getItem("role") || "").toLowerCase();
+            if (role === "admin") {
+              navigate("/dashboard", { replace: true });
+            } else if (role === "manager") {
+              navigate("/manager", { replace: true });
+            } else {
+              navigate("/", { replace: true });
+            }
+            return;
+          }
+        }
+      } catch (e) {
+        console.error("Invalid token found in SignUp", e);
+      }
+    }
+
     // Fetch available roles from the backend
     api.get("/roles")
       .then((res) => {
@@ -23,7 +47,7 @@ export default function SignUp({ setToken }) {
       .catch((err) => {
         toast.error("Failed to load roles");
       });
-  }, []);
+  }, [navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
