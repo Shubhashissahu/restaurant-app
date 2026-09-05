@@ -263,7 +263,7 @@ function ConsumerModal({ initial, onClose, onSubmit }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="bg-[#1E1E1E] border border-[#3A2E24] rounded-2xl shadow-2xl w-full max-w-lg p-7 relative overflow-hidden max-h-[90vh] overflow-y-auto">
+      <div className="bg-[#1E1E1E] border border-[#3A2E24] rounded-2xl shadow-2xl w-full max-w-lg p-7 relative overflow-hidden max-h-[90vh] overflow-y-auto no-scrollbar">
         <div className="flex items-center justify-between pb-4 mb-5 border-b border-[#3A2E24]">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#D4A373]/10 border border-[#3A2E24] flex items-center justify-center text-[#D4A373]">

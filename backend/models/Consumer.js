@@ -9,14 +9,24 @@ const consumerSchema = new mongoose.Schema({
   },
   email: {
     type: String,
-    required: [true, 'Email is required'],
+    required: false,
+    default: '',
+    trim: true,
     lowercase: true,
-    match: [/^\S+@\S+\.\S+$/, 'Invalid email format']
+    validate: {
+      validator: function (v) {
+        if (!v || v.trim() === '') return true; // optional
+        return /^\S+@\S+\.\S+$/.test(v);
+      },
+      message: 'Invalid email format'
+    }
   },
   phone: {
     type: String,
     required: [true, 'Phone is required'],
-    match: [/^[0-9]{10}$/, 'Phone must be 10 digits']
+    trim: true,
+    minlength: [3, 'Phone must be at least 3 digits'],
+    maxlength: [20, 'Phone must not exceed 20 digits']
   },
   partyType: {
     type: String,

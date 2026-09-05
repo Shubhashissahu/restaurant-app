@@ -4,6 +4,7 @@ const router = express.Router();
 const Consumer = require('../models/Consumer');
 const verifyToken = require('../middleware/auth');
 const isAdmin = require('../middleware/isAdmin');
+const isManager = require('../middleware/isManager');
 
 // POST /api/consumers — Register a new consumer / reserve a table
 router.post('/', async (req, res) => {
@@ -18,18 +19,22 @@ router.post('/', async (req, res) => {
       reservationDate = '',
       reservationTime = '',
       seatingPreference = 'Indoor Dining',
-      specialRequests = ''
+      specialRequests = '',
+      status = 'Confirmed'
     } = req.body;
 
     // Manual validation layer
-    if (!name || !email || !phone) {
-      return res.status(400).json({ message: 'Name, email, and phone are required' });
+    if (!name || !phone) {
+      return res.status(400).json({ message: 'Name and phone are required' });
     }
 
     const bookingCode = `TH-${Math.floor(100000 + Math.random() * 900000)}`;
 
-    // If consumer exists, update their latest table reservation
-    const existing = await Consumer.findOne({ email });
+    // If consumer email provided and exists, update their latest table reservation
+    let existing = null;
+    if (email && email.trim() !== '') {
+      existing = await Consumer.findOne({ email: email.trim().toLowerCase() });
+    }
     if (existing) {
       existing.name = name;
       existing.phone = phone;
@@ -41,7 +46,7 @@ router.post('/', async (req, res) => {
       existing.seatingPreference = seatingPreference || existing.seatingPreference;
       existing.specialRequests = specialRequests !== undefined ? specialRequests : existing.specialRequests;
       existing.bookingCode = bookingCode;
-      existing.status = 'Confirmed';
+      existing.status = status || existing.status || 'Confirmed';
 
       await existing.save();
       return res.status(200).json({
@@ -63,7 +68,7 @@ router.post('/', async (req, res) => {
       seatingPreference,
       specialRequests,
       bookingCode,
-      status: 'Confirmed'
+      status: status || 'Confirmed'
     });
     await consumer.save();
 
@@ -109,29 +114,17 @@ router.put('/:id', verifyToken, async (req, res) => {
     } = req.body;
 
     // Validation
-    if (!name || !email || !phone) {
+    if (!name || !phone) {
       return res.status(400).json({
-        message: 'Name, email, and phone are required',
-      });
-    }
-
-    // Check if email already exists for another user
-    const existing = await Consumer.findOne({
-      email,
-      _id: { $ne: id },
-    });
-
-    if (existing) {
-      return res.status(409).json({
-        message: 'Email already in use by another diner',
+        message: 'Name and phone are required',
       });
     }
 
     const updateFields = {
       name,
-      email,
       phone,
     };
+    if (email !== undefined) updateFields.email = email ? email.trim().toLowerCase() : '';
     if (partyType !== undefined) updateFields.partyType = partyType;
     if (customOccasion !== undefined) updateFields.customOccasion = customOccasion;
     if (guests !== undefined) updateFields.guests = Number(guests);
@@ -173,8 +166,7 @@ router.put('/:id', verifyToken, async (req, res) => {
   }
 });
 // DELETE /api/consumers/:id — Delete consumer
-
-router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
+router.delete('/:id', verifyToken, isManager, async (req, res) => {
   try {
 
     const { id } = req.params;

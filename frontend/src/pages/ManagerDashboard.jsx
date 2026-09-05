@@ -9,9 +9,11 @@ import {
   X,
   Briefcase,
   ChefHat,
+  CalendarCheck,
 } from "lucide-react";
 import { NavLink, Routes, Route, useNavigate, Navigate } from "react-router-dom";
 import ManagerOverview from "../components/manager/ManagerOverview";
+import ReservationManagement from "../components/manager/ReservationManagement";
 import TeamManagement from "../components/manager/TeamManagement";
 import ReportsAnalytics from "../components/manager/ReportsAnalytics";
 import ManagerProfile from "../components/manager/ManagerProfile";
@@ -22,6 +24,7 @@ export default function ManagerDashboard() {
 
   const managerLinks = [
     { name: "Overview", path: "", icon: LayoutDashboard },
+    { name: "Table Reservations", path: "reservations", icon: CalendarCheck },
     { name: "Team Management", path: "team", icon: Users },
     { name: "Reports & Stats", path: "reports", icon: FileBarChart },
     { name: "Profile Details", path: "profile", icon: UserCircle },
@@ -129,6 +132,7 @@ export default function ManagerDashboard() {
         <div className="p-6 md:p-10 overflow-y-auto max-w-7xl w-full">
           <Routes>
             <Route path="/" element={<ManagerOverview />} />
+            <Route path="/reservations" element={<ReservationManagement />} />
             <Route path="/team" element={<TeamManagement />} />
             <Route path="/reports" element={<ReportsAnalytics />} />
             <Route path="/profile" element={<ManagerProfile />} />
