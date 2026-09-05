@@ -13,7 +13,12 @@ exports.getStats = async (req, res) => {
     const totalRoles = await Role.countDocuments();
     const totalMenus = await NavMenu.countDocuments();
     const activeMenus = await NavMenu.countDocuments({ isActive: { $ne: false } });
-    const totalConsumers = await Consumer.countDocuments();
+    const consumers = await Consumer.find();
+    const totalReservedTables = consumers.length;
+    const totalGuestsReserved = consumers.reduce((acc, c) => acc + (Number(c.guests) || 2), 0);
+    const confirmedReservations = consumers.filter(
+      (c) => (c.status || "Confirmed").toLowerCase() === "confirmed"
+    ).length;
     const totalMenuItems = await MenuItem.countDocuments();
 
     res.json({
@@ -22,7 +27,10 @@ exports.getStats = async (req, res) => {
       totalRoles,
       totalMenus,
       activeMenus,
-      totalConsumers,
+      totalConsumers: totalReservedTables,
+      totalReservedTables,
+      totalGuestsReserved,
+      confirmedReservations,
       totalMenuItems
     });
   } catch (err) {
