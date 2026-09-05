@@ -234,7 +234,9 @@ exports.getReportsStats = async (req, res) => {
     // 2. Menu & Consumer stats
     const menuItems = await MenuItem.find();
     const totalMenuItems = menuItems.length;
-    const totalConsumers = await Consumer.countDocuments();
+    const allConsumers = await Consumer.find();
+    const totalConsumers = allConsumers.length;
+    const totalGuestsReserved = allConsumers.reduce((acc, c) => acc + (Number(c.guests) || 1), 0);
 
     // Category breakdown from actual menu
     const categoryMap = {};
@@ -341,6 +343,8 @@ exports.getReportsStats = async (req, res) => {
         totalStaff: totalTeamMembers,
         registeredConsumers: totalConsumers,
         consumerGrowth: "+18%",
+        totalReservations: totalConsumers,
+        totalGuestsReserved,
         tableTurnoverMinutes: 44,
         customerRating: 4.86,
       },
@@ -468,5 +472,233 @@ exports.updateProfile = async (req, res) => {
   } catch (err) {
     console.error("Error updating manager profile:", err);
     res.status(500).json({ message: "Failed to update profile" });
+  }
+};
+
+// ==========================================
+// 4. TABLE RESERVATIONS MANAGEMENT
+// ==========================================
+
+// GET /api/manager/reservations - Fetch all reservations with calculated statistics
+exports.getReservations = async (req, res) => {
+  try {
+    const reservations = await Consumer.find().sort({ createdAt: -1 });
+
+    const todayStr = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    let totalGuests = 0;
+    let confirmedCount = 0;
+    let seatedCount = 0;
+    let pendingCount = 0;
+    let cancelledCount = 0;
+    let todayReservations = 0;
+    let todayGuests = 0;
+
+    reservations.forEach((r) => {
+      const g = Number(r.guests) || 1;
+      totalGuests += g;
+      const st = (r.status || "Confirmed").toLowerCase();
+      if (st === "confirmed") confirmedCount++;
+      else if (st === "seated") seatedCount++;
+      else if (st === "pending") pendingCount++;
+      else if (st === "cancelled") cancelledCount++;
+
+      if (r.reservationDate === todayStr) {
+        todayReservations++;
+        todayGuests += g;
+      }
+    });
+
+    res.json({
+      reservations,
+      stats: {
+        totalReservations: reservations.length,
+        totalGuests,
+        confirmedCount,
+        seatedCount,
+        pendingCount,
+        cancelledCount,
+        todayReservations,
+        todayGuests,
+      },
+    });
+  } catch (err) {
+    console.error("Error fetching reservations for manager:", err);
+    res.status(500).json({ message: "Failed to fetch table reservations" });
+  }
+};
+
+// POST /api/manager/reservations - Manager creates/reserves a table
+exports.createReservation = async (req, res) => {
+  try {
+    const {
+      name,
+      email = "",
+      phone,
+      partyType = "Couple",
+      customOccasion = "",
+      guests = 2,
+      reservationDate = "",
+      reservationTime = "",
+      seatingPreference = "Indoor Dining",
+      specialRequests = "",
+      status = "Confirmed",
+    } = req.body;
+
+    if (!name || !phone) {
+      return res.status(400).json({ message: "Guest Name and Phone number are required" });
+    }
+
+    const bookingCode = `TH-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    const reservation = new Consumer({
+      name: name.trim(),
+      email: email ? email.trim().toLowerCase() : "",
+      phone: phone.trim(),
+      partyType,
+      customOccasion: customOccasion?.trim() || "",
+      guests: Number(guests) || 2,
+      reservationDate: reservationDate || "",
+      reservationTime: reservationTime || "",
+      seatingPreference: seatingPreference || "Indoor Dining",
+      specialRequests: specialRequests?.trim() || "",
+      bookingCode,
+      status: status || "Confirmed",
+    });
+
+    await reservation.save();
+
+    await AuditLog.create({
+      user: req.user.id,
+      action: "MANAGER_CREATE_RESERVATION",
+      targetId: reservation._id.toString(),
+      after: {
+        name: reservation.name,
+        email: reservation.email,
+        phone: reservation.phone,
+        guests: reservation.guests,
+        reservationDate: reservation.reservationDate,
+        reservationTime: reservation.reservationTime,
+        status: reservation.status,
+      },
+    });
+
+    res.status(201).json({
+      message: "Table reserved successfully by manager",
+      reservation,
+    });
+  } catch (err) {
+    console.error("Error creating reservation by manager:", err);
+    let errorMsg = err.message;
+    if (err.errors) {
+      errorMsg = Object.values(err.errors).map((e) => e.message).join(", ");
+    }
+    res.status(400).json({ message: errorMsg || "Failed to create reservation", error: err.message });
+  }
+};
+
+// PUT /api/manager/reservations/:id - Manager edits an existing reservation
+exports.updateReservation = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      name,
+      email,
+      phone,
+      partyType,
+      customOccasion,
+      guests,
+      reservationDate,
+      reservationTime,
+      seatingPreference,
+      specialRequests,
+      status,
+    } = req.body;
+
+    const before = await Consumer.findById(id);
+    if (!before) {
+      return res.status(404).json({ message: "Reservation not found" });
+    }
+
+    const previousData = {
+      name: before.name,
+      email: before.email,
+      phone: before.phone,
+      guests: before.guests,
+      reservationDate: before.reservationDate,
+      reservationTime: before.reservationTime,
+      partyType: before.partyType,
+      seatingPreference: before.seatingPreference,
+      status: before.status,
+    };
+
+    if (name) before.name = name.trim();
+    if (phone) before.phone = phone.trim();
+    if (email !== undefined) before.email = email ? email.trim().toLowerCase() : "";
+    if (partyType !== undefined) before.partyType = partyType;
+    if (customOccasion !== undefined) before.customOccasion = customOccasion.trim();
+    if (guests !== undefined) before.guests = Number(guests);
+    if (reservationDate !== undefined) before.reservationDate = reservationDate;
+    if (reservationTime !== undefined) before.reservationTime = reservationTime;
+    if (seatingPreference !== undefined) before.seatingPreference = seatingPreference;
+    if (specialRequests !== undefined) before.specialRequests = specialRequests.trim();
+    if (status !== undefined) before.status = status;
+
+    await before.save();
+
+    await AuditLog.create({
+      user: req.user.id,
+      action: "MANAGER_UPDATE_RESERVATION",
+      targetId: before._id.toString(),
+      before: previousData,
+      after: {
+        name: before.name,
+        email: before.email,
+        phone: before.phone,
+        guests: before.guests,
+        reservationDate: before.reservationDate,
+        reservationTime: before.reservationTime,
+        partyType: before.partyType,
+        seatingPreference: before.seatingPreference,
+        status: before.status,
+      },
+    });
+
+    res.json({
+      message: "Table reservation updated successfully",
+      reservation: before,
+    });
+  } catch (err) {
+    console.error("Error updating reservation by manager:", err);
+    res.status(500).json({ message: "Failed to update reservation", error: err.message });
+  }
+};
+
+// DELETE /api/manager/reservations/:id - Manager deletes/cancels reservation
+exports.deleteReservation = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const reservation = await Consumer.findByIdAndDelete(id);
+    if (!reservation) {
+      return res.status(404).json({ message: "Reservation not found" });
+    }
+
+    await AuditLog.create({
+      user: req.user.id,
+      action: "MANAGER_DELETE_RESERVATION",
+      targetId: id,
+      before: {
+        name: reservation.name,
+        email: reservation.email,
+        guests: reservation.guests,
+        reservationDate: reservation.reservationDate,
+        bookingCode: reservation.bookingCode,
+      },
+    });
+
+    res.json({ message: "Reservation removed successfully" });
+  } catch (err) {
+    console.error("Error deleting reservation by manager:", err);
+    res.status(500).json({ message: "Failed to delete reservation", error: err.message });
   }
 };

@@ -231,7 +231,15 @@ function ItemModal({ initial, onClose, onSubmit }) {
 // --- Consumer Modal (Create/Edit) ---
 function ConsumerModal({ initial, onClose, onSubmit }) {
   const [form, setForm] = useState(
-    initial || { name: "", email: "", phone: "" }
+    initial || {
+      name: "",
+      email: "",
+      phone: "",
+      partyType: "Couple",
+      guests: 2,
+      reservationDate: "",
+      reservationTime: "08:00 PM"
+    }
   );
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -255,7 +263,7 @@ function ConsumerModal({ initial, onClose, onSubmit }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="bg-[#1E1E1E] border border-[#3A2E24] rounded-2xl shadow-2xl w-full max-w-md p-7 relative overflow-hidden">
+      <div className="bg-[#1E1E1E] border border-[#3A2E24] rounded-2xl shadow-2xl w-full max-w-lg p-7 relative overflow-hidden max-h-[90vh] overflow-y-auto no-scrollbar">
         <div className="flex items-center justify-between pb-4 mb-5 border-b border-[#3A2E24]">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#D4A373]/10 border border-[#3A2E24] flex items-center justify-center text-[#D4A373]">
@@ -263,9 +271,9 @@ function ConsumerModal({ initial, onClose, onSubmit }) {
             </div>
             <div>
               <h2 className="text-lg font-bold text-[#FAF7F2]">
-                {initial ? "Edit Consumer" : "Register Diner"}
+                {initial ? "Edit Reservation / Diner" : "Register Reservation"}
               </h2>
-              <p className="text-xs text-[#C2B59B]">Customer profile & loyalty record</p>
+              <p className="text-xs text-[#C2B59B]">Table booking & diner profile</p>
             </div>
           </div>
           <button onClick={onClose} className="text-[#C2B59B] hover:text-[#FAF7F2] p-1 rounded-lg hover:bg-[#2A2A2A]">
@@ -285,28 +293,82 @@ function ConsumerModal({ initial, onClose, onSubmit }) {
             />
           </div>
 
-          <div>
-            <label className="text-xs font-semibold text-[#C2B59B] mb-1.5 block">Email Address *</label>
-            <input
-              type="email"
-              className={INPUT_STYLE}
-              placeholder="e.g. aarav@example.com"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              required
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-[#C2B59B] mb-1.5 block">Email Address *</label>
+              <input
+                type="email"
+                className={INPUT_STYLE}
+                placeholder="e.g. aarav@example.com"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-[#C2B59B] mb-1.5 block">Phone Number *</label>
+              <input
+                type="tel"
+                className={INPUT_STYLE}
+                placeholder="e.g. 9876543210"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                required
+              />
+            </div>
           </div>
 
-          <div>
-            <label className="text-xs font-semibold text-[#C2B59B] mb-1.5 block">Phone Number (10 Digits) *</label>
-            <input
-              type="tel"
-              className={INPUT_STYLE}
-              placeholder="e.g. 9876543210"
-              value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              required
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-[#C2B59B] mb-1.5 block">Occasion / Party Type</label>
+              <select
+                className={INPUT_STYLE}
+                value={form.partyType || "Couple"}
+                onChange={(e) => setForm({ ...form, partyType: e.target.value })}
+              >
+                <option value="Couple" className="bg-[#1E1E1E]">Couple</option>
+                <option value="Family" className="bg-[#1E1E1E]">Family</option>
+                <option value="Friends" className="bg-[#1E1E1E]">Friends</option>
+                <option value="Office Colleagues" className="bg-[#1E1E1E]">Office Colleagues</option>
+                <option value="Other" className="bg-[#1E1E1E]">Other / Custom</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-[#C2B59B] mb-1.5 block">Number of Guests</label>
+              <input
+                type="number"
+                min="1"
+                max="50"
+                className={INPUT_STYLE}
+                value={form.guests || 2}
+                onChange={(e) => setForm({ ...form, guests: parseInt(e.target.value) || 1 })}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-[#C2B59B] mb-1.5 block">Reservation Date</label>
+              <input
+                type="date"
+                className={INPUT_STYLE}
+                value={form.reservationDate || ""}
+                onChange={(e) => setForm({ ...form, reservationDate: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-[#C2B59B] mb-1.5 block">Time Slot</label>
+              <input
+                type="text"
+                className={INPUT_STYLE}
+                placeholder="e.g. 08:00 PM"
+                value={form.reservationTime || ""}
+                onChange={(e) => setForm({ ...form, reservationTime: e.target.value })}
+              />
+            </div>
           </div>
 
           {error && (
@@ -329,7 +391,7 @@ function ConsumerModal({ initial, onClose, onSubmit }) {
               disabled={submitting}
               className="px-6 py-2.5 rounded-xl text-sm font-semibold bg-[#D4A373] hover:bg-[#8B5E3C] text-[#141414] hover:text-[#FAF7F2] transition disabled:opacity-50"
             >
-              {submitting ? "Saving..." : initial ? "Save Changes" : "Register Diner"}
+              {submitting ? "Saving..." : initial ? "Update Reservation" : "Register Reservation"}
             </button>
           </div>
         </form>
@@ -710,7 +772,7 @@ export default function Overview() {
           <table className="w-full text-left text-sm">
             <thead className="bg-[#2A2A2A]">
               <tr>
-                {["Name", "Email", "Phone", "Status", "Actions"].map((h) => (
+                {["Diner", "Occasion / Party", "Table & Time", "Phone", "Status", "Actions"].map((h) => (
                   <th
                     key={h}
                     className={`px-6 py-3.5 text-xs font-semibold text-[#D4A373] uppercase tracking-wider ${
@@ -725,17 +787,17 @@ export default function Overview() {
             <tbody className="divide-y divide-[#3A2E24]">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-[#C2B59B]">
+                  <td colSpan={6} className="py-12 text-center text-[#C2B59B]">
                     <RotateCw size={20} className="animate-spin mx-auto text-[#D4A373] mb-2" />
-                    Loading consumers...
+                    Loading reservations...
                   </td>
                 </tr>
               ) : filteredConsumers.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-[#C2B59B]">
+                  <td colSpan={6} className="py-12 text-center text-[#C2B59B]">
                     {consumerSearch
-                      ? "No consumers found matching your query."
-                      : "No consumers registered yet."}
+                      ? "No reservations found matching your query."
+                      : "No table reservations placed yet."}
                   </td>
                 </tr>
               ) : (
@@ -746,15 +808,38 @@ export default function Overview() {
                         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#D4A373] to-[#8B5E3C] text-[#141414] font-bold text-xs flex items-center justify-center shadow-sm">
                           {(c.name || "Diner").charAt(0).toUpperCase()}
                         </div>
-                        <span className="font-semibold text-[#FAF7F2]">{c.name}</span>
+                        <div>
+                          <p className="font-semibold text-[#FAF7F2]">{c.name}</p>
+                          <p className="text-[11px] text-[#8B7E6A] flex items-center gap-1">
+                            <Mail size={11} className="text-[#8B7E6A]" /> {c.email}
+                          </p>
+                        </div>
                       </div>
                     </td>
 
-                    <td className="px-6 py-4 text-[#C2B59B] text-xs">
-                      <span className="flex items-center gap-1.5">
-                        <Mail size={13} className="text-[#8B7E6A]" />
-                        {c.email}
-                      </span>
+                    <td className="px-6 py-4">
+                      <div className="space-y-0.5">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#D4A373]/10 text-[#D4A373] border border-[#D4A373]/30">
+                          {c.partyType || "Standard"}
+                        </span>
+                        {c.customOccasion && (
+                          <p className="text-[11px] text-[#C2B59B] italic truncate max-w-[140px]">
+                            {c.customOccasion}
+                          </p>
+                        )}
+                      </div>
+                    </td>
+
+                    <td className="px-6 py-4 text-xs">
+                      <div className="space-y-0.5">
+                        <p className="font-semibold text-[#FAF7F2]">
+                          {c.guests || 2} {Number(c.guests) === 1 ? "Guest" : "Guests"}
+                        </p>
+                        <p className="text-[#C2B59B] text-[11px]">
+                          {c.reservationDate || "Date N/A"}
+                          {c.reservationTime ? ` @ ${c.reservationTime}` : ""}
+                        </p>
+                      </div>
                     </td>
 
                     <td className="px-6 py-4 text-[#FAF7F2] text-xs">
@@ -767,7 +852,7 @@ export default function Overview() {
                     <td className="px-6 py-4">
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                         <CheckCircle2 size={12} />
-                        Verified
+                        {c.status || "Confirmed"}
                       </span>
                     </td>
 
@@ -776,14 +861,14 @@ export default function Overview() {
                         <button
                           onClick={() => setEditConsumer(c)}
                           className="p-1.5 rounded-lg text-[#D4A373] hover:text-[#FAF7F2] hover:bg-[#2A2A2A] transition"
-                          title="Edit consumer"
+                          title="Edit reservation"
                         >
                           <Pencil size={15} />
                         </button>
                         <button
                           onClick={() => handleDeleteConsumer(c._id)}
                           className="p-1.5 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition"
-                          title="Delete consumer"
+                          title="Delete reservation"
                         >
                           <Trash2 size={15} />
                         </button>

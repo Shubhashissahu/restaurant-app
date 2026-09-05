@@ -20,4 +20,10 @@ router.get("/reports/stats", ctrl.getReportsStats);
 router.get("/profile", ctrl.getProfile);
 router.put("/profile", ctrl.updateProfile);
 
+// Table Reservations routes
+router.get("/reservations", ctrl.getReservations);
+router.post("/reservations", ctrl.createReservation);
+router.put("/reservations/:id", ctrl.updateReservation);
+router.delete("/reservations/:id", ctrl.deleteReservation);
+
 module.exports = router;
