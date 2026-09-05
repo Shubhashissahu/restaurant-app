@@ -56,7 +56,7 @@ export default function ReportsAnalytics() {
       ["Average Order Value", `Rs. ${data.kpi.averageOrderValue}`, data.kpi.aovGrowth],
       ["Customer Satisfaction", `${data.kpi.customerRating} / 5.0`, "N/A"],
       ["Active Staff On Duty", `${data.kpi.activeStaff} / ${data.kpi.totalStaff}`, "N/A"],
-      ["Registered Consumers", data.kpi.registeredConsumers, data.kpi.consumerGrowth],
+      ["Reserved Tables", data.kpi.registeredConsumers, data.kpi.consumerGrowth],
       [],
       ["--- CATEGORY SALES DISTRIBUTION ---"],
       ["Category", "Share %", "Revenue (Rs.)"],
