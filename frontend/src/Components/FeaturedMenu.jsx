@@ -1,4 +1,4 @@
-// src/components/Menu.jsx
+// src/Components/FeaturedMenu.jsx
 
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -21,7 +21,7 @@ const CHEF_DELICACIES = [
   {
     id: "delicacy-1",
     name: "Butter Chicken",
-    category: "MAINS",
+    category: "MAIN COURSE",
     price: 280,
     badge: "POPULAR",
     badgeType: "popular",
@@ -49,7 +49,7 @@ const CHEF_DELICACIES = [
   {
     id: "delicacy-3",
     name: "Paneer Tikka Masala",
-    category: "MAINS",
+    category: "MAIN COURSE",
     price: 240,
     badge: "VEGETARIAN",
     badgeType: "veg",
@@ -63,7 +63,7 @@ const CHEF_DELICACIES = [
   {
     id: "delicacy-4",
     name: "Dal Makhani",
-    category: "MAINS",
+    category: "MAIN COURSE",
     price: 180,
     badge: "CLASSIC",
     badgeType: "classic",
@@ -132,7 +132,7 @@ const CHEF_DELICACIES = [
   },
 ];
 
-export default function Menu() {
+export default function FeaturedMenu() {
   const navigate = useNavigate();
   const scrollRef = useRef(null);
   const [items, setItems] = useState(CHEF_DELICACIES);
@@ -150,7 +150,7 @@ export default function Menu() {
           const backendItems = res.data.slice(0, 8).map((bItem, idx) => ({
             id: bItem._id || `backend-${idx}`,
             name: bItem.name,
-            category: (bItem.category || "MAINS").toUpperCase(),
+            category: (bItem.category === "Mains" ? "Main Course" : bItem.category || "MAIN COURSE").toUpperCase(),
             price: Number(bItem.price) || 250,
             badge: idx === 0 ? "POPULAR" : idx === 1 ? "CHEF'S PICK" : "SPECIAL",
             badgeType: idx === 0 ? "popular" : idx === 1 ? "chef" : "classic",

@@ -1,6 +1,6 @@
 // src/pages/Menu.jsx
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import { Helmet } from "react-helmet";
 import {
@@ -10,106 +10,47 @@ import {
   Search,
   SlidersHorizontal,
   Star,
+  Filter,
+  X,
 } from "lucide-react";
 import { resolveDishImage } from "../utils/imageUtils";
 
 const API = "http://localhost:5000/api";
 
-// ── Categories ───────────────────────────────────────────────────────────────
-const categories = [
-  { name: "All", emoji: "🍽️", img: null },
+// ── Category Normalizer ──────────────────────────────────────────────────────
+function normalizeCategory(category = "", name = "") {
+  const n = (name || "").toLowerCase();
+  const c = (category || "").toLowerCase().trim();
 
-  {
-    name: "Burgers",
-    emoji: "🍔",
-    img: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&q=80",
-  },
+  // If dish is explicitly a drink / beverage
+  if (
+    n.includes("chai") ||
+    n.includes("lassi") ||
+    n.includes("tea") ||
+    n.includes("shake") ||
+    n.includes("coffee") ||
+    n.includes("juice")
+  ) {
+    return "Drinks";
+  }
 
-  {
-    name: "Pizza",
-    emoji: "🍕",
-    img: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400&q=80",
-  },
-
-  {
-    name: "Sushi",
-    emoji: "🍱",
-    img: "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=400&q=80",
-  },
-
-  {
-    name: "Pasta",
-    emoji: "🍝",
-    img: "https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=400&q=80",
-  },
-
-  {
-    name: "Salads",
-    emoji: "🥗",
-    img: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&q=80",
-  },
-
-  {
-    name: "Desserts",
-    emoji: "🍰",
-    img: "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=400&q=80",
-  },
-
-  {
-    name: "Drinks",
-    emoji: "🥤",
-    img: "https://images.unsplash.com/photo-1544145945-f90425340c7e?w=400&q=80",
-  },
-
-  {
-    name: "Seafood",
-    emoji: "🦞",
-    img: "https://images.unsplash.com/photo-1559742811-822873691df8?w=400&q=80",
-  },
-
-  {
-    name: "Steaks",
-    emoji: "🥩",
-    img: "https://images.unsplash.com/photo-1558030006-450675393462?w=400&q=80",
-  },
-
-  {
-    name: "Chicken",
-    emoji: "🍗",
-    img: "https://images.unsplash.com/photo-1598103442097-8b74394b95c1?w=400&q=80",
-  },
-];
-const FOOD_IMAGES = {
-  "Butter Chicken":
-    "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=800&q=80",
-
-  "Paneer Tikka Masala":
-    "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=800&q=80",
-
-  "Dal Makhani":
-    "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=800&q=80",
-
-  "Samosa (2 pcs)":
-    "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=800&q=80",
-
-  "Hara Bhara Kabab":
-    "https://images.unsplash.com/photo-1613292443284-8d10ef9383fe?w=800&q=80",
-
-  "Masala Chai":
-    "https://images.unsplash.com/photo-1571934811356-5cc061b6821f?w=800&q=80",
-
-  "Mango Lassi":
-    "https://images.unsplash.com/photo-1623065422902-30a2d299bbe4?w=800&q=80",
-
-  "mix curry":
-    "https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=800&q=80",
-
-  "Biryani Thali":
-    "https://images.unsplash.com/photo-1563379091339-03246963d96c?w=800&q=80",
-
-  default:
-    "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&q=80",
-};
+  if (c === "mains" || c === "main course" || c === "main-course" || c === "maincourse") {
+    return "Main Course";
+  }
+  if (c === "starters" || c === "starter" || c === "appetizers" || c === "appetizer") {
+    return "Starters";
+  }
+  if (c === "drinks" || c === "drink" || c === "beverages" || c === "beverage") {
+    return "Drinks";
+  }
+  if (c === "desserts" || c === "dessert" || c === "sweets" || c === "sweet") {
+    return "Desserts";
+  }
+  if (c === "specials" || c === "special") {
+    return "Specials";
+  }
+  return category || "General";
+}
 
 // ── Photos ───────────────────────────────────────────────────────────────────
 const CATEGORY_PHOTOS = {
@@ -182,14 +123,18 @@ function getReviews(id) {
   return 20 + (seed % 80);
 }
 
-function MenuCard({ item, ordered, onOrder }) {
-  const photo = resolveDishImage(item.image || item.imageUrl, item.name, item.category);
+function MenuCard({ item, ordered, onOrder, index = 0 }) {
+  const normCategory = normalizeCategory(item.category, item.name);
+  const photo = resolveDishImage(item.image || item.imageUrl, item.name, normCategory);
 
   const rating = getRating(item._id);
   const reviews = getReviews(item._id);
 
   return (
-    <div className="group relative bg-[#1A1A1A]/95 backdrop-blur-xl border border-[#3A2E24] rounded-[28px] overflow-hidden shadow-2xl hover:-translate-y-3 hover:border-[#D4A373]/40 transition-all duration-500 flex flex-col">
+    <div
+      style={{ animationDelay: `${Math.min(index * 60, 500)}ms` }}
+      className="group relative bg-[#1A1A1A]/95 backdrop-blur-xl border border-[#3A2E24] rounded-[28px] overflow-hidden shadow-2xl hover:-translate-y-3 hover:border-[#D4A373]/50 hover:shadow-[0_15px_35px_rgba(212,163,115,0.15)] transition-all duration-500 flex flex-col animate-slide-up"
+    >
       {/* GOLD HOVER OVERLAY */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#D4A373]/5 via-transparent to-[#8B5E3C]/10 opacity-0 group-hover:opacity-100 transition duration-500 pointer-events-none z-10"></div>
 
@@ -204,7 +149,9 @@ function MenuCard({ item, ordered, onOrder }) {
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
           onError={(e) => {
             const fallback =
-              CATEGORY_PHOTOS[item.category] || CATEGORY_PHOTOS["default"];
+              CATEGORY_PHOTOS[normCategory] ||
+              CATEGORY_PHOTOS[item.category] ||
+              CATEGORY_PHOTOS["default"];
             if (e.target.src !== fallback) {
               e.target.src = fallback;
             }
@@ -215,7 +162,7 @@ function MenuCard({ item, ordered, onOrder }) {
 
         {/* CATEGORY BADGE */}
         <span className="absolute top-4 left-4 bg-[#1A1A1A]/90 backdrop-blur-md text-[#D4A373] text-[10px] font-extrabold uppercase tracking-wide px-3 py-1.5 rounded-full shadow-xl border border-[#3A2E24]">
-          {item.category || "General"}
+          {normCategory}
         </span>
       </div>
 
@@ -294,47 +241,30 @@ function SkeletonCard() {
 // ── Main ─────────────────────────────────────────────────────────────────────
 export default function Menu() {
   const [items, setItems] = useState([]);
-
   const [filter, setFilter] = useState("all");
-
   const [activeCategory, setActiveCategory] = useState("All");
-
   const [loading, setLoading] = useState(true);
-
   const [error, setError] = useState(null);
-
   const [orderMsg, setOrderMsg] = useState(null);
-
   const [searchQuery, setSearchQuery] = useState("");
-
   const [orderedItems, setOrderedItems] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-
       setError(null);
 
       try {
         let url = `${API}/menu?_t=${Date.now()}`;
-
         if (filter === "below100") url += "&maxPrice=100";
-
-        if (filter === "range")
-          url += "&minPrice=100&maxPrice=500";
-
-        if (filter === "above500")
-          url += "&minPrice=500";
+        if (filter === "range") url += "&minPrice=100&maxPrice=500";
+        if (filter === "above500") url += "&minPrice=500";
 
         const res = await axios.get(url);
-
         setItems(res.data);
       } catch (err) {
         console.error(err);
-
-        setError(
-          "Unable to load menu. Please make sure the server is running."
-        );
+        setError("Unable to load menu. Please make sure the server is running.");
       } finally {
         setLoading(false);
       }
@@ -343,28 +273,60 @@ export default function Menu() {
     fetchData();
   }, [filter]);
 
-  const visibleItems = items.filter((item) => {
-    const matchCategory =
-      activeCategory === "All" ||
-      item.category === activeCategory;
+  // Filter items by category & search term
+  const filteredItems = useMemo(() => {
+    return items.filter((item) => {
+      const itemNorm = normalizeCategory(item.category, item.name);
+      let matchCategory = activeCategory === "All";
 
-    const matchSearch =
-      searchQuery === "" ||
-      item.name
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase()) ||
-      item.description
-        ?.toLowerCase()
-        .includes(searchQuery.toLowerCase());
+      if (!matchCategory) {
+        if (activeCategory === "Main Course") {
+          matchCategory = itemNorm === "Main Course";
+        } else if (activeCategory === "Starters") {
+          matchCategory = itemNorm === "Starters";
+        } else if (activeCategory === "Appetizers") {
+          matchCategory = itemNorm === "Starters" || itemNorm === "Appetizers";
+        } else if (activeCategory === "Drinks") {
+          matchCategory = itemNorm === "Drinks";
+        } else {
+          matchCategory =
+            itemNorm === activeCategory ||
+            item.category?.toLowerCase() === activeCategory.toLowerCase();
+        }
+      }
 
-    return matchCategory && matchSearch;
-  });
+      const matchSearch =
+        searchQuery === "" ||
+        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.description?.toLowerCase().includes(searchQuery.toLowerCase());
+
+      return matchCategory && matchSearch;
+    });
+  }, [items, activeCategory, searchQuery]);
+
+  // Sort items according to culinary hierarchy
+  const sortedItems = useMemo(() => {
+    const list = [...filteredItems];
+    const order = {
+      "Starters": 1,
+      "Main Course": 2,
+      "Drinks": 3,
+      "Desserts": 4,
+      "Specials": 5,
+    };
+    list.sort((a, b) => {
+      const aRank = order[normalizeCategory(a.category, a.name)] || 99;
+      const bRank = order[normalizeCategory(b.category, b.name)] || 99;
+      if (aRank !== bRank) return aRank - bRank;
+      return Number(a.price) - Number(b.price);
+    });
+
+    return list;
+  }, [filteredItems]);
 
   const handleOrder = (item) => {
     setOrderedItems((prev) => [...prev, item._id]);
-
     setOrderMsg(`"${item.name}" added to your order!`);
-
     setTimeout(() => setOrderMsg(null), 3000);
   };
 
@@ -407,123 +369,110 @@ export default function Menu() {
 
         <div className="max-w-7xl mx-auto px-6 py-10">
 
-          {/* SEARCH */}
-          <div className="relative max-w-lg mx-auto mb-10 -mt-8 z-10">
+          {/* CONTROLS BAR (MATCHING SCREENSHOT 1) */}
+          <div className="rounded-2xl bg-[#1E1E1E]/95 backdrop-blur-xl border border-[#3A2E24] p-6 shadow-2xl space-y-5 -mt-16 relative z-20 mb-10 overflow-hidden">
+            {/* Ambient Animated Glows */}
+            <div className="absolute -top-12 -right-12 w-56 h-56 bg-[#D4A373]/10 rounded-full blur-3xl pointer-events-none animate-float-slow" />
+            <div className="absolute -bottom-12 -left-12 w-56 h-56 bg-[#8B5E3C]/10 rounded-full blur-3xl pointer-events-none animate-float-reverse" />
 
-            <Search
-              size={18}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8B7E6A]"
-            />
-
-            <input
-              type="text"
-              placeholder="Search dishes..."
-              value={searchQuery}
-              onChange={(e) =>
-                setSearchQuery(e.target.value)
-              }
-              className="w-full pl-11 pr-4 py-4 rounded-2xl border border-[#3A2E24] bg-[#1E1E1E] shadow-xl focus:outline-none focus:ring-2 focus:ring-[#D4A373] text-sm text-[#FAF7F2] placeholder:text-[#8B7E6A]"
-            />
-          </div>
-
-          {/* CATEGORY */}
-          <h2 className="text-xl font-bold text-[#FAF7F2] mb-5">
-            Browse by Category
-          </h2>
-
-          <div className="flex gap-4 overflow-x-auto pb-4 mb-10 scrollbar-hide">
-
-            {categories.map((cat) => (
-              <button
-                key={cat.name}
-                onClick={() =>
-                  setActiveCategory(cat.name)
-                }
-                className={`relative min-w-[110px] h-24 rounded-2xl overflow-hidden shrink-0 transition-all duration-300 shadow-lg
-                ${activeCategory === cat.name
-                    ? "ring-2 ring-[#D4A373] ring-offset-2 ring-offset-[#141414] scale-105"
-                    : "hover:scale-105"
-                  }`}
-              >
-                {cat.img ? (
-                  <>
-                    <img
-                      src={cat.img}
-                      alt={cat.name}
-                      className="w-full h-full object-cover"
-                    />
-
-                    <div
-                      className={`absolute inset-0 flex flex-col items-center justify-center
-                      ${activeCategory === cat.name
-                          ? "bg-[#D4A373]/70"
-                          : "bg-black/50 hover:bg-black/40"
-                        }`}
-                    >
-                      <span className="text-2xl">
-                        {cat.emoji}
-                      </span>
-
-                      <p className="text-white text-xs font-semibold mt-1">
-                        {cat.name}
-                      </p>
-                    </div>
-                  </>
-                ) : (
-                  <div
-                    className={`w-full h-full flex flex-col items-center justify-center
-                    ${activeCategory === cat.name
-                        ? "bg-[#D4A373] text-[#141414]"
-                        : "bg-[#1E1E1E] text-[#FAF7F2]"
-                      }`}
-                  >
-                    <span className="text-2xl">
-                      {cat.emoji}
+            {/* Row 1: Header, Counter & Search */}
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2.5">
+                  <h2 className="text-xl font-bold text-[#FAF7F2] tracking-wide">
+                    Food Menu Items
+                  </h2>
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#D4A373]/10 text-[#D4A373] border border-[#D4A373]/30 font-semibold inline-flex items-center gap-1.5 transition-transform duration-300">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#D4A373] opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-[#D4A373]"></span>
                     </span>
+                    {sortedItems.length} of {items.length} Dishes
+                  </span>
+                </div>
+                <p className="text-xs text-[#C2B59B] mt-1 font-medium">
+                  Manage culinary dishes, prices, and categorizations
+                </p>
+              </div>
 
-                    <p className="text-xs font-semibold mt-1">
-                      {cat.name}
-                    </p>
-                  </div>
+              {/* Search Box */}
+              <div className="relative w-full md:w-72 group">
+                <Search
+                  size={15}
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8B7E6A] transition-colors group-focus-within:text-[#D4A373]"
+                />
+                <input
+                  type="text"
+                  placeholder="Search dishes or ingredients..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-[#2A2A2A] border border-[#3A2E24] rounded-xl pl-9 pr-8 py-2 text-xs text-[#FAF7F2] placeholder:text-[#8B7E6A] focus:outline-none focus:border-[#D4A373] focus:ring-2 focus:ring-[#D4A373]/20 transition-all duration-300"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8B7E6A] hover:text-[#FAF7F2] active:scale-90 transition-transform"
+                  >
+                    <X size={13} />
+                  </button>
                 )}
-              </button>
-            ))}
+              </div>
+            </div>
+
+            {/* Row 2: Filters Toolbar (Category & Price) */}
+            <div className="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-3 pt-3 border-t border-[#3A2E24]/60">
+              {/* Category Filter Pills */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                <Filter size={14} className="text-[#8B7E6A] mr-1 flex-shrink-0 transition-transform duration-300 hover:rotate-12" />
+                {["All", "Starters", "Main Course", "Appetizers", "Desserts", "Drinks"].map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setActiveCategory(cat)}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap active:scale-95 hover:scale-105 transition-all duration-200 cursor-pointer ${
+                      activeCategory === cat
+                        ? "bg-[#D4A373] text-[#141414] shadow-lg shadow-[#D4A373]/25 font-bold scale-[1.02]"
+                        : "bg-[#2A2A2A] text-[#C2B59B] hover:text-[#FAF7F2] hover:bg-[#333333] hover:border-[#D4A373]/40 border border-[#3A2E24]"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+
+              {/* Price Filter Pills & Reset */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none flex-shrink-0">
+                <span className="flex items-center gap-1.5 text-[#8B7E6A] text-xs font-medium mr-1">
+                  <SlidersHorizontal size={13} className="text-[#D4A373]" />
+                  Price:
+                </span>
+                {PRICE_FILTERS.map((btn) => (
+                  <button
+                    key={btn.value}
+                    onClick={() => setFilter(btn.value)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap active:scale-95 hover:scale-105 transition-all duration-200 cursor-pointer ${
+                      filter === btn.value
+                        ? "bg-[#D4A373] text-[#141414] font-bold shadow-lg shadow-[#D4A373]/25 scale-[1.02]"
+                        : "bg-[#2A2A2A] text-[#C2B59B] hover:text-[#FAF7F2] hover:bg-[#333333] hover:border-[#D4A373]/40 border border-[#3A2E24]"
+                    }`}
+                  >
+                    {btn.label}
+                  </button>
+                ))}
+                {(activeCategory !== "All" || filter !== "all" || searchQuery) && (
+                  <button
+                    onClick={() => {
+                      setActiveCategory("All");
+                      setFilter("all");
+                      setSearchQuery("");
+                    }}
+                    className="text-xs text-[#D4A373] hover:text-white hover:underline font-semibold ml-2 whitespace-nowrap active:scale-90 transition-all duration-200 cursor-pointer"
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
-
-          {/* FILTERS */}
-          <div className="flex flex-wrap justify-center gap-3 mb-8">
-
-            <span className="flex items-center gap-1.5 text-[#C2B59B] text-sm self-center">
-              <SlidersHorizontal size={15} />
-              Price:
-            </span>
-
-            {PRICE_FILTERS.map((btn) => (
-              <button
-                key={btn.value}
-                onClick={() => setFilter(btn.value)}
-                className={`px-5 py-2 rounded-full text-sm font-medium transition shadow-sm
-                ${filter === btn.value
-                    ? "bg-[#D4A373] text-[#141414]"
-                    : "bg-[#1E1E1E] text-[#FAF7F2] hover:shadow-xl border border-[#3A2E24]"
-                  }`}
-              >
-                {btn.label}
-              </button>
-            ))}
-          </div>
-
-          {/* RESULT */}
-          {!loading && !error && (
-            <p className="text-center text-xs text-[#8B7E6A] mb-8">
-              {visibleItems.length === 0
-                ? "No items found"
-                : `Showing ${visibleItems.length} item${visibleItems.length !== 1
-                  ? "s"
-                  : ""
-                }`}
-            </p>
-          )}
 
           {/* ERROR */}
           {error && (
@@ -545,15 +494,14 @@ export default function Menu() {
           {/* EMPTY */}
           {!loading &&
             !error &&
-            visibleItems.length === 0 && (
+            sortedItems.length === 0 && (
               <div className="flex flex-col items-center justify-center py-24 text-[#C2B59B]">
-
                 <p className="text-2xl font-semibold text-[#FAF7F2]">
-                  No items found
+                  No dishes found
                 </p>
 
                 <p className="text-sm mt-2 text-center max-w-xs">
-                  Try a different category or search term.
+                  Try selecting another category, changing price filters, or clearing search.
                 </p>
 
                 <button
@@ -562,25 +510,27 @@ export default function Menu() {
                     setSearchQuery("");
                     setActiveCategory("All");
                   }}
-                  className="mt-6 px-6 py-3 bg-[#D4A373] hover:bg-[#8B5E3C] text-[#141414] rounded-full text-sm font-medium transition"
+                  className="mt-6 px-6 py-3 bg-[#D4A373] hover:bg-[#8B5E3C] text-[#141414] font-semibold rounded-full text-sm transition shadow-lg shadow-[#D4A373]/20"
                 >
-                  Clear Filters
+                  Clear All Filters
                 </button>
               </div>
             )}
 
-          {/* GRID */}
+          {/* DISHES GRID */}
           {!loading &&
             !error &&
-            visibleItems.length > 0 && (
-              <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6 pb-20">
-                {visibleItems.map((item) => (
+            sortedItems.length > 0 && (
+              <div
+                key={`${activeCategory}-${filter}-${searchQuery}`}
+                className="grid sm:grid-cols-2 md:grid-cols-3 gap-6 pb-20"
+              >
+                {sortedItems.map((item, idx) => (
                   <MenuCard
                     key={item._id}
                     item={item}
-                    ordered={orderedItems.includes(
-                      item._id
-                    )}
+                    index={idx}
+                    ordered={orderedItems.includes(item._id)}
                     onOrder={handleOrder}
                   />
                 ))}
@@ -591,7 +541,7 @@ export default function Menu() {
 
       {/* TOAST */}
       {orderMsg && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-[#D4A373] text-[#141414] px-6 py-3 rounded-2xl shadow-2xl text-sm font-semibold">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-[#D4A373] text-[#141414] px-6 py-3.5 rounded-2xl shadow-2xl text-sm font-bold animate-pop-in border border-[#141414]/20">
           <CheckCircle size={18} />
           {orderMsg}
         </div>

@@ -1,13 +1,13 @@
 // pages/Home.jsx
 import Hero from "../components/hero";
-import Menu from "../components/Menu";
+import FeaturedMenu from "../Components/FeaturedMenu";
 import Info from "../components/Info";
 
 export default function Home() {
   return (
     <div>
       <Hero />
-      <Menu />
+      <FeaturedMenu />
       <Info />
     </div>
   );
