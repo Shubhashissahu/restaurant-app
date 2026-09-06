@@ -13,11 +13,13 @@ import {
   ShieldCheck,
   Sparkles,
   ChevronRight,
-  CalendarCheck
+  CalendarCheck,
+  UtensilsCrossed
 } from "lucide-react";
 import { NavLink, Routes, Route, useNavigate, Navigate } from "react-router-dom";
 
 import Overview from "../components/admin/Overview";
+import FoodMenuManagement from "../components/admin/FoodMenuManagement";
 import UserManagement from "../components/admin/UserManagement";
 import RoleManagement from "../components/admin/RoleManagement";
 import MenuManagement from "../components/admin/MenuManagement";
@@ -50,10 +52,11 @@ export default function Dashboard() {
   // Sidebar Links
   const adminLinks = [
     { name: "Overview", path: "", icon: LayoutDashboard },
+    { name: "Food Menu", path: "food-menu", icon: UtensilsCrossed },
     { name: "Reserved Tables", path: "reservations", icon: CalendarCheck },
     { name: "Users", path: "users", icon: Users },
     { name: "Roles", path: "roles", icon: ShieldAlert },
-    { name: "Menus", path: "menus", icon: MenuSquare },
+    { name: "Navigation Menus", path: "menus", icon: MenuSquare },
     { name: "Permissions", path: "permissions", icon: KeySquare },
     { name: "Audit Logs", path: "audit", icon: History },
     { name: "Settings", path: "settings", icon: UserCircle },
@@ -176,6 +179,7 @@ export default function Dashboard() {
         <div className="p-6 md:p-10 overflow-y-auto max-w-7xl w-full mx-auto">
           <Routes>
             <Route path="/" element={<Overview />} />
+            <Route path="/food-menu" element={<FoodMenuManagement />} />
             <Route path="/reservations" element={<ReservationManagement />} />
             <Route path="/users" element={<UserManagement />} />
             <Route path="/roles" element={<RoleManagement />} />

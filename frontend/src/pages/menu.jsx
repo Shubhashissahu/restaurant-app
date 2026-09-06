@@ -11,6 +11,7 @@ import {
   SlidersHorizontal,
   Star,
 } from "lucide-react";
+import { resolveDishImage } from "../utils/imageUtils";
 
 const API = "http://localhost:5000/api";
 
@@ -182,10 +183,7 @@ function getReviews(id) {
 }
 
 function MenuCard({ item, ordered, onOrder }) {
-  const photo =
-    FOOD_IMAGES[item.name] ||
-    item.imageUrl ||
-    FOOD_IMAGES.default;
+  const photo = resolveDishImage(item.image || item.imageUrl, item.name, item.category);
 
   const rating = getRating(item._id);
   const reviews = getReviews(item._id);
@@ -205,7 +203,11 @@ function MenuCard({ item, ordered, onOrder }) {
           alt={item.name}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
           onError={(e) => {
-            e.target.src = CATEGORY_PHOTOS["default"];
+            const fallback =
+              CATEGORY_PHOTOS[item.category] || CATEGORY_PHOTOS["default"];
+            if (e.target.src !== fallback) {
+              e.target.src = fallback;
+            }
           }}
         />
 
@@ -314,15 +316,15 @@ export default function Menu() {
       setError(null);
 
       try {
-        let url = `${API}/menu`;
+        let url = `${API}/menu?_t=${Date.now()}`;
 
-        if (filter === "below100") url += "?maxPrice=100";
+        if (filter === "below100") url += "&maxPrice=100";
 
         if (filter === "range")
-          url += "?minPrice=100&maxPrice=500";
+          url += "&minPrice=100&maxPrice=500";
 
         if (filter === "above500")
-          url += "?minPrice=500";
+          url += "&minPrice=500";
 
         const res = await axios.get(url);
 
