@@ -1,20 +1,91 @@
 //routes/menu
 const express = require('express');
 const router = express.Router();
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
 const MenuItem = require('../models/MenuItem');
 const verifyToken = require('../middleware/auth');
 const isAdmin = require('../middleware/isAdmin');
 
+// Configure multer storage for food photos
+const uploadDir = path.join(__dirname, '../public/uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    cb(null, 'dish-' + uniqueSuffix + ext);
+  }
+});
+
+const fileFilter = (req, file, cb) => {
+  const allowed = /jpeg|jpg|png|webp|gif|svg\+xml|svg/;
+  const isMimeValid = allowed.test(file.mimetype);
+  const isExtValid = allowed.test(path.extname(file.originalname).toLowerCase().replace('.', ''));
+  if (isMimeValid || isExtValid) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only image files (JPEG, JPG, PNG, WEBP, GIF, SVG) are allowed'));
+  }
+};
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+  fileFilter
+});
+
+// POST /api/menu/upload — Upload dish photo
+router.post('/upload', verifyToken, (req, res) => {
+  upload.single('photo')(req, res, function (err) {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ message: 'File size exceeds 5MB limit' });
+      }
+      return res.status(400).json({ message: err.message });
+    } else if (err) {
+      return res.status(400).json({ message: err.message });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: 'Please select an image file to upload' });
+    }
+
+    const relativeUrl = `/uploads/${req.file.filename}`;
+    res.json({
+      message: 'Photo uploaded successfully',
+      imageUrl: relativeUrl,
+      filename: req.file.filename
+    });
+  });
+});
+
 // POST /api/menu — Add a new menu item
 router.post('/', verifyToken, async (req, res) => {
   try {
-    const { name, description, price, category } = req.body;
+    const { name, description, price, category, image, imageUrl } = req.body;
 
     if (!name || !description || price === undefined) {
       return res.status(400).json({ message: 'Name, description, and price are required' });
     }
 
-    const item = new MenuItem({ name, description, price, category });
+    const resolvedImage = (image || imageUrl || '').trim();
+
+    const item = new MenuItem({
+      name,
+      description,
+      price,
+      category: category || 'Main Course',
+      image: resolvedImage,
+      imageUrl: resolvedImage
+    });
     await item.save();
     res.status(201).json({ message: 'Menu item added', item });
   } catch (err) {
@@ -38,6 +109,7 @@ router.get('/', async (req, res) => {
     }
 
     const items = await MenuItem.find(filter).sort({ price: 1 });
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.json(items);
 
   } catch (err) {
@@ -50,11 +122,23 @@ router.put('/:id', verifyToken, async (req, res) => {
   try {
 
     const { id } = req.params;
+    const updateData = { ...req.body };
+
+    // Prevent immutable field errors
+    delete updateData._id;
+    delete updateData.id;
+
+    if (updateData.image !== undefined || updateData.imageUrl !== undefined) {
+      const resolved = (updateData.image || updateData.imageUrl || '').trim();
+      updateData.image = resolved;
+      updateData.imageUrl = resolved;
+    }
 
     const updatedItem = await MenuItem.findByIdAndUpdate(
       id,
-      req.body,
+      updateData,
       {
+        returnDocument: 'after',
         new: true,
         runValidators: true,
       }

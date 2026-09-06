@@ -1,5 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import api from "../../services/api";
+import { FoodMenuCard as MenuItemCard, FoodItemModal as ItemModal } from "./FoodMenuManagement";
 import {
   Utensils,
   Clock,
@@ -62,178 +64,8 @@ function StatCard({ icon: Icon, label, value, subtext, badge }) {
   );
 }
 
-// --- Menu Item Card ---
-function MenuItemCard({ item, onEdit, onDelete }) {
-  return (
-    <div className="group relative flex flex-col justify-between rounded-2xl bg-[#1E1E1E] border border-[#3A2E24] p-5 transition-all duration-300 hover:border-[#D4A373]/40 hover:shadow-2xl hover:-translate-y-1">
-      <div>
-        <div className="flex items-start justify-between gap-3 mb-2">
-          <h3 className="font-bold text-[#FAF7F2] text-base leading-snug group-hover:text-[#D4A373] transition-colors">
-            {item.name}
-          </h3>
-          <span className="font-bold text-[#D4A373] bg-[#2A2A2A] px-2.5 py-1 rounded-lg border border-[#3A2E24] text-sm whitespace-nowrap">
-            ₹{Number(item.price || 0).toLocaleString("en-IN")}
-          </span>
-        </div>
+// MenuItemCard and ItemModal are imported from FoodMenuManagement with full photo upload capabilities
 
-        {item.description ? (
-          <p className="text-xs text-[#C2B59B] line-clamp-2 leading-relaxed mb-4">
-            {item.description}
-          </p>
-        ) : (
-          <p className="text-xs text-[#8B7E6A] italic mb-4">No description provided</p>
-        )}
-      </div>
-
-      <div className="flex items-center justify-between pt-3 border-t border-[#3A2E24]/60 mt-auto">
-        <span className="text-xs bg-[#2A2A2A] text-[#D4A373] px-3 py-1 rounded-full border border-[#3A2E24] font-medium">
-          {item.category || "General"}
-        </span>
-
-        <div className="flex items-center gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={() => onEdit(item)}
-            className="p-1.5 rounded-lg text-[#C2B59B] hover:text-[#FAF7F2] hover:bg-[#2A2A2A] transition"
-            title="Edit item"
-          >
-            <Pencil size={15} />
-          </button>
-          <button
-            onClick={() => onDelete(item._id)}
-            className="p-1.5 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition"
-            title="Delete item"
-          >
-            <Trash2 size={15} />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// --- Item Modal (Create/Edit) ---
-function ItemModal({ initial, onClose, onSubmit }) {
-  const [form, setForm] = useState(
-    initial || { name: "", category: "Main Course", price: "", description: "" }
-  );
-  const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!form.name.trim()) return setError("Dish name is required");
-    if (!form.price || Number(form.price) <= 0) return setError("Please enter a valid price");
-
-    setSubmitting(true);
-    try {
-      await onSubmit({ ...form, price: Number(form.price) });
-      onClose();
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to save menu item");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="bg-[#1E1E1E] border border-[#3A2E24] rounded-2xl shadow-2xl w-full max-w-lg p-7 relative overflow-hidden">
-        <div className="flex items-center justify-between pb-4 mb-5 border-b border-[#3A2E24]">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#D4A373]/10 border border-[#3A2E24] flex items-center justify-center text-[#D4A373]">
-              <ChefHat size={20} />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-[#FAF7F2]">
-                {initial ? "Edit Menu Dish" : "Add New Dish"}
-              </h2>
-              <p className="text-xs text-[#C2B59B]">Specify details for the restaurant menu catalogue</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="text-[#C2B59B] hover:text-[#FAF7F2] p-1 rounded-lg hover:bg-[#2A2A2A]">
-            <X size={20} />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="text-xs font-semibold text-[#C2B59B] mb-1.5 block">Dish Name *</label>
-            <input
-              className={INPUT_STYLE}
-              placeholder="e.g. Hara Bhara Kabab, Paneer Butter Masala"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-semibold text-[#C2B59B] mb-1.5 block">Category</label>
-              <select
-                className={INPUT_STYLE}
-                value={form.category}
-                onChange={(e) => setForm({ ...form, category: e.target.value })}
-              >
-                <option value="Starters">Starters</option>
-                <option value="Main Course">Main Course</option>
-                <option value="Appetizers">Appetizers</option>
-                <option value="Desserts">Desserts</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-[#C2B59B] mb-1.5 block">Price (₹) *</label>
-              <input
-                type="number"
-                step="any"
-                className={INPUT_STYLE}
-                placeholder="250"
-                value={form.price}
-                onChange={(e) => setForm({ ...form, price: e.target.value })}
-                required
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="text-xs font-semibold text-[#C2B59B] mb-1.5 block">Description</label>
-            <textarea
-              className={`${INPUT_STYLE} resize-none h-24`}
-              placeholder="Freshly prepared with authentic herbs and premium spices..."
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-            />
-          </div>
-
-          {error && (
-            <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
-              <AlertCircle size={15} />
-              <span>{error}</span>
-            </div>
-          )}
-
-          <div className="flex items-center justify-end gap-3 pt-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-5 py-2.5 rounded-xl text-sm font-medium text-[#C2B59B] hover:text-[#FAF7F2] hover:bg-[#2A2A2A] transition"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="px-6 py-2.5 rounded-xl text-sm font-semibold bg-[#D4A373] hover:bg-[#8B5E3C] text-[#141414] hover:text-[#FAF7F2] transition disabled:opacity-50"
-            >
-              {submitting ? "Saving..." : initial ? "Save Changes" : "Create Dish"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
 
 // --- Table Reservation Modal (Create/Edit) ---
 function ConsumerModal({ initial, onClose, onSubmit }) {
@@ -802,6 +634,12 @@ export default function Overview() {
               <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#D4A373]/10 text-[#D4A373] border border-[#D4A373]/30 font-semibold">
                 {menuItems.length} Items
               </span>
+              <Link
+                to="/dashboard/food-menu"
+                className="text-xs text-[#D4A373] hover:underline font-semibold ml-2 hidden sm:inline"
+              >
+                Manage Full Catalogue →
+              </Link>
             </div>
             <p className="text-xs text-[#C2B59B] mt-0.5">Manage culinary dishes, prices, and categorizations</p>
           </div>

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../services/api";
+import { resolveDishImage } from "../utils/imageUtils";
 
 const CHEF_DELICACIES = [
   {
@@ -142,7 +143,7 @@ export default function Menu() {
   // Fetch backend menu items if available to augment items
   useEffect(() => {
     api
-      .get("/menu")
+      .get(`/menu?_t=${Date.now()}`)
       .then((res) => {
         if (Array.isArray(res.data) && res.data.length > 0) {
           // Merge with fallback to ensure high quality images & descriptions
@@ -157,7 +158,11 @@ export default function Menu() {
             rating: (4.7 + (idx % 4) * 0.1).toFixed(1),
             reviews: 80 + idx * 25,
             image:
-              CHEF_DELICACIES[idx % CHEF_DELICACIES.length].image,
+              resolveDishImage(
+                bItem.image || bItem.imageUrl,
+                bItem.name,
+                bItem.category
+              ) || CHEF_DELICACIES[idx % CHEF_DELICACIES.length].image,
           }));
           if (backendItems.length >= 4) {
             setItems(backendItems);
