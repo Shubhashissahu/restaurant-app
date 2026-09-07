@@ -101,7 +101,7 @@ function DishDetailsModal({ item, ordered, onOrder, onClose }) {
   const photo = resolveDishImage(item.image || item.imageUrl, item.name, normCategory);
   const rating = getRating(item._id);
   const reviews = getReviews(item._id);
-  const isAvailable = item.isAvailable !== false && item.status !== "Sold Out";
+  const isAvailable = item.isAvailable !== false && item.status !== "Unavailable" && item.status !== "Sold Out";
 
   return (
     <div
@@ -172,7 +172,7 @@ function DishDetailsModal({ item, ordered, onOrder, onClose }) {
                   isAvailable ? "bg-emerald-400 animate-pulse" : "bg-rose-400"
                 }`}
               />
-              {isAvailable ? "Available Today" : "Sold Out"}
+              {isAvailable ? "Available Today" : "Unavailable"}
             </span>
           </div>
 
@@ -249,7 +249,7 @@ function MenuCard({ item, ordered, onOrder, onViewDetails, index = 0 }) {
   const photo = resolveDishImage(item.image || item.imageUrl, item.name, normCategory);
   const rating = getRating(item._id);
   const reviews = getReviews(item._id);
-  const isAvailable = item.isAvailable !== false && item.status !== "Sold Out";
+  const isAvailable = item.isAvailable !== false && item.status !== "Unavailable" && item.status !== "Sold Out";
 
   return (
     <article
@@ -293,7 +293,7 @@ function MenuCard({ item, ordered, onOrder, onViewDetails, index = 0 }) {
         {/* 7. AVAILABILITY / STATUS BADGE */}
         <div className="absolute top-3.5 right-3.5 z-20">
           <span
-            aria-label={`Status: ${isAvailable ? "Available" : "Sold Out"}`}
+            aria-label={`Status: ${isAvailable ? "Available" : "Unavailable"}`}
             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-md border shadow-md ${
               isAvailable
                 ? "bg-emerald-950/80 text-emerald-400 border-emerald-500/30"
@@ -305,7 +305,7 @@ function MenuCard({ item, ordered, onOrder, onViewDetails, index = 0 }) {
                 isAvailable ? "bg-emerald-400 animate-pulse" : "bg-rose-400"
               }`}
             />
-            {isAvailable ? "Available" : "Sold Out"}
+            {isAvailable ? "Available" : "Unavailable"}
           </span>
         </div>
       </div>
@@ -384,7 +384,7 @@ function MenuCard({ item, ordered, onOrder, onViewDetails, index = 0 }) {
                 aria-label={
                   isAvailable
                     ? `Add ${item.name} to order`
-                    : `${item.name} is currently sold out`
+                    : `${item.name} is currently unavailable`
                 }
                 className={`relative px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-lg transition-all duration-200 focus-visible:ring-2 focus-visible:ring-[#D4A373] focus-visible:outline-none overflow-hidden ${
                   isAvailable
@@ -393,7 +393,7 @@ function MenuCard({ item, ordered, onOrder, onViewDetails, index = 0 }) {
                 }`}
               >
                 <ShoppingCart size={15} />
-                <span>{isAvailable ? "Order" : "Sold Out"}</span>
+                <span>{isAvailable ? "Order" : "Unavailable"}</span>
               </button>
             )}
           </div>

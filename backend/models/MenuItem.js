@@ -28,6 +28,15 @@ const menuItemSchema = new mongoose.Schema({
     type: String,
     default: '',
     trim: true
+  },
+  isAvailable: {
+    type: Boolean,
+    default: true
+  },
+  status: {
+    type: String,
+    enum: ['Available', 'Unavailable'],
+    default: 'Available'
   }
 }, { timestamps: true });
 

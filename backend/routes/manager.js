@@ -26,4 +26,9 @@ router.post("/reservations", ctrl.createReservation);
 router.put("/reservations/:id", ctrl.updateReservation);
 router.delete("/reservations/:id", ctrl.deleteReservation);
 
+// Menu & Availability Management routes
+router.get("/menu", ctrl.getMenuItems);
+router.patch("/menu/:id/availability", ctrl.toggleMenuAvailability);
+router.put("/menu/:id", ctrl.updateMenuItem);
+
 module.exports = router;

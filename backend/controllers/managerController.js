@@ -702,3 +702,120 @@ exports.deleteReservation = async (req, res) => {
     res.status(500).json({ message: "Failed to delete reservation", error: err.message });
   }
 };
+
+// ==========================================
+// 5. MENU & AVAILABILITY MANAGEMENT (MANAGER)
+// ==========================================
+
+// GET /api/manager/menu - Fetch all menu items for manager view
+exports.getMenuItems = async (req, res) => {
+  try {
+    const items = await MenuItem.find().sort({ category: 1, name: 1 });
+    res.json(items);
+  } catch (err) {
+    console.error("Error fetching menu items for manager:", err);
+    res.status(500).json({ message: "Failed to fetch menu items", error: err.message });
+  }
+};
+
+// PATCH /api/manager/menu/:id/availability - Toggle dish availability in real time
+exports.toggleMenuAvailability = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const item = await MenuItem.findById(id);
+    if (!item) {
+      return res.status(404).json({ message: "Menu item not found" });
+    }
+
+    let isAvailable;
+    if (typeof req.body.isAvailable === "boolean") {
+      isAvailable = req.body.isAvailable;
+    } else if (req.body.status) {
+      isAvailable = req.body.status !== "Unavailable" && req.body.status !== "Sold Out";
+    } else {
+      isAvailable = !(item.isAvailable !== false && item.status !== "Unavailable" && item.status !== "Sold Out");
+    }
+
+    const previousStatus = item.status || (item.isAvailable !== false ? "Available" : "Unavailable");
+    item.isAvailable = isAvailable;
+    item.status = isAvailable ? "Available" : "Unavailable";
+    await item.save();
+
+    // Create Audit Log for traceability
+    await AuditLog.create({
+      user: req.user.id,
+      action: "MANAGER_UPDATE_MENU_AVAILABILITY",
+      targetId: id,
+      before: {
+        dishName: item.name,
+        status: previousStatus,
+        isAvailable: !isAvailable,
+      },
+      after: {
+        dishName: item.name,
+        status: item.status,
+        isAvailable: item.isAvailable,
+      },
+    });
+
+    res.json({
+      message: `"${item.name}" is now marked as ${item.status}`,
+      item,
+    });
+  } catch (err) {
+    console.error("Error toggling menu availability by manager:", err);
+    res.status(500).json({ message: "Failed to update dish availability", error: err.message });
+  }
+};
+
+// PUT /api/manager/menu/:id - Manager quick update for dish details/availability
+exports.updateMenuItem = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isAvailable, status, price, description } = req.body;
+
+    const item = await MenuItem.findById(id);
+    if (!item) {
+      return res.status(404).json({ message: "Menu item not found" });
+    }
+
+    if (isAvailable !== undefined) {
+      item.isAvailable = Boolean(isAvailable);
+      item.status = item.isAvailable ? "Available" : "Unavailable";
+    } else if (status !== undefined) {
+      const isUnavailable = status === "Unavailable" || status === "Sold Out";
+      item.status = isUnavailable ? "Unavailable" : "Available";
+      item.isAvailable = !isUnavailable;
+    }
+
+    if (price !== undefined && !isNaN(price)) {
+      item.price = Number(price);
+    }
+
+    if (description !== undefined) {
+      item.description = description.trim();
+    }
+
+    await item.save();
+
+    await AuditLog.create({
+      user: req.user.id,
+      action: "MANAGER_UPDATE_MENU_ITEM",
+      targetId: id,
+      after: {
+        dishName: item.name,
+        price: item.price,
+        status: item.status,
+        isAvailable: item.isAvailable,
+      },
+    });
+
+    res.json({
+      message: `Menu item "${item.name}" updated successfully`,
+      item,
+    });
+  } catch (err) {
+    console.error("Error updating menu item by manager:", err);
+    res.status(500).json({ message: "Failed to update menu item", error: err.message });
+  }
+};

@@ -17,6 +17,7 @@ import {
   CalendarCheck,
   MapPin,
   Calendar,
+  UtensilsCrossed,
 } from "lucide-react";
 
 export default function ManagerOverview() {
@@ -70,10 +71,17 @@ export default function ManagerOverview() {
           {/* Quick Action Buttons */}
           <div className="flex flex-wrap items-center gap-3">
             <Link
-              to="/manager/reservations"
+              to="/manager/menu"
               className="inline-flex items-center gap-2 bg-[#D4A373] hover:bg-[#8B5E3C] text-[#141414] hover:text-[#FAF7F2] font-bold px-5 py-2.5 rounded-xl transition shadow-lg shadow-[#D4A373]/20 text-sm"
             >
-              <CalendarCheck size={16} />
+              <UtensilsCrossed size={16} />
+              Menu Availability
+            </Link>
+            <Link
+              to="/manager/reservations"
+              className="inline-flex items-center gap-2 bg-[#2A2A2A] hover:bg-[#333333] text-[#FAF7F2] border border-[#3A2E24] font-semibold px-5 py-2.5 rounded-xl transition text-sm"
+            >
+              <CalendarCheck size={16} className="text-[#D4A373]" />
               Manage Reservations
             </Link>
             <Link
