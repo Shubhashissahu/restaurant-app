@@ -134,6 +134,16 @@ router.put('/:id', verifyToken, async (req, res) => {
       updateData.imageUrl = resolved;
     }
 
+    if (updateData.isAvailable !== undefined && updateData.status === undefined) {
+      updateData.status = updateData.isAvailable ? 'Available' : 'Unavailable';
+    } else if (updateData.status !== undefined) {
+      const isUnavailable = updateData.status === 'Unavailable' || updateData.status === 'Sold Out';
+      updateData.status = isUnavailable ? 'Unavailable' : 'Available';
+      if (updateData.isAvailable === undefined) {
+        updateData.isAvailable = !isUnavailable;
+      }
+    }
+
     const updatedItem = await MenuItem.findByIdAndUpdate(
       id,
       updateData,
@@ -162,6 +172,37 @@ router.put('/:id', verifyToken, async (req, res) => {
       error: err.message,
     });
 
+  }
+});
+
+// PATCH /api/menu/:id/availability — Toggle or update dish availability
+router.patch('/:id/availability', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const item = await MenuItem.findById(id);
+    if (!item) {
+      return res.status(404).json({ message: 'Menu item not found' });
+    }
+
+    let isAvailable;
+    if (typeof req.body.isAvailable === 'boolean') {
+      isAvailable = req.body.isAvailable;
+    } else if (req.body.status) {
+      isAvailable = req.body.status !== 'Unavailable' && req.body.status !== 'Sold Out';
+    } else {
+      isAvailable = !(item.isAvailable !== false && item.status !== 'Unavailable' && item.status !== 'Sold Out');
+    }
+
+    item.isAvailable = isAvailable;
+    item.status = isAvailable ? 'Available' : 'Unavailable';
+    await item.save();
+
+    res.json({
+      message: `Dish "${item.name}" is now marked as ${item.status}`,
+      item,
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
 // DELETE /api/menu/:id — Delete menu item
