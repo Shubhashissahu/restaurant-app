@@ -1,20 +1,35 @@
 import { useState, useEffect } from "react";
 import api from "../services/api";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import toast from "react-hot-toast";
-import { ChefHat, Loader2, ChevronDown } from "lucide-react";
+import { ChefHat, Loader2, ChevronDown, Crown, Briefcase, User } from "lucide-react";
 
 const ROLE_OPTIONS = [
-  { value: "admin", label: "Admin" },
-  { value: "manager", label: "Manager" },
-  { value: "user", label: "User" },
+  { value: "admin", label: "Admin", icon: Crown, subtitle: "Administrator Portal" },
+  { value: "manager", label: "Manager", icon: Briefcase, subtitle: "Branch Manager Portal" },
+  { value: "user", label: "User", icon: User, subtitle: "Customer / Staff Portal" },
 ];
 
-export default function Login({ setToken }) {
-  const [form, setForm] = useState({ email: "", password: "" });
-  const [loginAs, setLoginAs] = useState("admin");
-  const [loading, setLoading] = useState(false);
+export default function Login({ setToken, initialRole }) {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const getRoleFromPath = () => {
+    if (initialRole) return initialRole.toLowerCase();
+    if (location.pathname.includes("admin")) return "admin";
+    if (location.pathname.includes("manager")) return "manager";
+    if (location.pathname.includes("user")) return "user";
+    return "admin";
+  };
+
+  const [form, setForm] = useState({ email: "", password: "" });
+  const [loginAs, setLoginAs] = useState(getRoleFromPath);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const detected = getRoleFromPath();
+    setLoginAs(detected);
+  }, [location.pathname, initialRole]);
 
   // If already logged in with a valid token, redirect directly to dashboard
   useEffect(() => {
@@ -86,6 +101,9 @@ export default function Login({ setToken }) {
     }
   };
 
+  const currentOption = ROLE_OPTIONS.find((opt) => opt.value === loginAs) || ROLE_OPTIONS[0];
+  const CurrentRoleIcon = currentOption.icon;
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#141414] px-4 pt-16">
       <div className="w-full max-w-md bg-[#1D1D1D] border border-[#3A2E24] rounded-2xl shadow-2xl p-8 relative overflow-hidden">
@@ -94,14 +112,30 @@ export default function Login({ setToken }) {
 
         <div className="text-center mb-8 relative">
           <div className="flex justify-center mb-3">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#D4A373] to-[#8B5E3C] flex items-center justify-center shadow-lg">
-              <ChefHat className="text-[#141414]" />
+            <div className="relative">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#D4A373] to-[#8B5E3C] flex items-center justify-center shadow-lg">
+                <ChefHat className="text-[#141414]" />
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[#1A1A1A] border border-[#3A2E24] flex items-center justify-center text-[#D4A373] shadow">
+                <CurrentRoleIcon size={12} />
+              </div>
             </div>
           </div>
 
-          <h1 className="text-2xl font-bold text-[#FAF7F2]">Welcome Back</h1>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#D4A373]/10 border border-[#D4A373]/20 text-[#D4A373] text-xs font-medium mb-2">
+            <CurrentRoleIcon size={13} />
+            <span>{currentOption.subtitle}</span>
+          </div>
+
+          <h1 className="text-2xl font-bold text-[#FAF7F2]">
+            {currentOption.label} Login
+          </h1>
           <p className="text-sm text-[#C2B59B] mt-1">
-            Sign in to access your dashboard
+            {loginAs === "admin"
+              ? "Sign in to access system administration & analytics"
+              : loginAs === "manager"
+              ? "Sign in to manage menus, orders & branch operations"
+              : "Sign in to access your table reservations & profile"}
           </p>
         </div>
 
@@ -111,7 +145,11 @@ export default function Login({ setToken }) {
             <div className="relative mt-1">
               <select
                 value={loginAs}
-                onChange={(e) => setLoginAs(e.target.value)}
+                onChange={(e) => {
+                  const newRole = e.target.value;
+                  setLoginAs(newRole);
+                  navigate(`/${newRole}/login`, { replace: true });
+                }}
                 className="w-full p-3 rounded-lg bg-[#141414] border border-[#3A2E24] text-[#FAF7F2] focus:border-[#D4A373] outline-none transition appearance-none cursor-pointer"
               >
                 {ROLE_OPTIONS.map((opt) => (
