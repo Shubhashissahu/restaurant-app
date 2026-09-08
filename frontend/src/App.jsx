@@ -43,6 +43,9 @@ function AppContent({ token, setToken }) {
           <Route path="/menu" element={<Menu />} />
           <Route path="/register" element={<ConsumerForm />} />
           <Route path="/login" element={<Login setToken={setToken} />} />
+          <Route path="/admin/login" element={<Login setToken={setToken} initialRole="admin" />} />
+          <Route path="/manager/login" element={<Login setToken={setToken} initialRole="manager" />} />
+          <Route path="/user/login" element={<Login setToken={setToken} initialRole="user" />} />
           <Route path="/signup" element={<SignUp setToken={setToken} />} />
 
           {/* ADMIN PROTECTED ROUTE */}

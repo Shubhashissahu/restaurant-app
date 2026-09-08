@@ -13,6 +13,7 @@ import {
   ShieldAlert,
   Briefcase
 } from "lucide-react";
+import LoginDropdown from "./LoginDropdown";
 
 export default function Navbar({ token, setToken }) {
   const navigate = useNavigate();
@@ -156,13 +157,9 @@ export default function Navbar({ token, setToken }) {
               </button>
             </div>
           ) : (
-            <NavLink
-              to="/login"
-              className="flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold bg-[#D4A373] text-[#141414] hover:opacity-90 ml-4"
-            >
-              <LogIn size={16} />
-              Login
-            </NavLink>
+            <div className="ml-2">
+              <LoginDropdown />
+            </div>
           )}
         </div>
       </div>
