@@ -3,6 +3,8 @@ const Role = require("../models/Role");
 const MenuItem = require("../models/MenuItem");
 const Consumer = require("../models/Consumer");
 const AuditLog = require("../models/AuditLog");
+const PriceChangeRequest = require("../models/PriceChangeRequest");
+const Notification = require("../models/Notification");
 const bcrypt = require("bcrypt");
 
 // Helper to get the 'user' role
@@ -707,11 +709,74 @@ exports.deleteReservation = async (req, res) => {
 // 5. MENU & AVAILABILITY MANAGEMENT (MANAGER)
 // ==========================================
 
-// GET /api/manager/menu - Fetch all menu items for manager view
+// GET /api/manager/menu - Fetch all menu items for manager view with pending and approved price requests
 exports.getMenuItems = async (req, res) => {
   try {
     const items = await MenuItem.find().sort({ category: 1, name: 1 });
-    res.json(items);
+    
+    // Fetch all price requests sorted by creation date descending
+    const allRequests = await PriceChangeRequest.find().sort({ createdAt: -1 });
+
+    const pendingMap = {};
+    const latestMap = {};
+
+    allRequests.forEach((p) => {
+      if (!p.menuItem) return;
+      const itemId = p.menuItem.toString();
+
+      // Record newest request per menuItem
+      if (!latestMap[itemId]) {
+        latestMap[itemId] = {
+          requestId: p._id,
+          status: p.status, // "Pending" | "Approved" | "Rejected"
+          requestedPrice: p.requestedPrice,
+          currentPrice: p.currentPrice,
+          reason: p.reason,
+          reviewNote: p.reviewNote,
+          reviewedByName: p.reviewedByName,
+          reviewedAt: p.reviewedAt,
+          createdAt: p.createdAt,
+        };
+      }
+
+      // Record any active Pending request
+      if (p.status === "Pending" && !pendingMap[itemId]) {
+        pendingMap[itemId] = {
+          requestId: p._id,
+          requestedPrice: p.requestedPrice,
+          currentPrice: p.currentPrice,
+          reason: p.reason,
+          requestedByName: p.requestedByName,
+          createdAt: p.createdAt,
+        };
+      }
+    });
+
+    const itemsWithStatus = items.map((item) => {
+      const plain = item.toObject();
+      const itemId = item._id.toString();
+
+      if (pendingMap[itemId]) {
+        plain.pendingPriceChange = pendingMap[itemId];
+        plain.priceApprovalStatus = "Pending";
+        plain.isPriceApproved = false; // Proposed price is awaiting approval
+      } else if (latestMap[itemId] && latestMap[itemId].status === "Rejected") {
+        plain.latestPriceRequest = latestMap[itemId];
+        plain.priceApprovalStatus = "Rejected";
+        plain.isPriceApproved = false; // Price change was rejected / not approved
+      } else {
+        // Current live menu price is approved
+        plain.priceApprovalStatus = "Approved";
+        plain.isPriceApproved = true;
+        if (latestMap[itemId]) {
+          plain.latestPriceRequest = latestMap[itemId];
+        }
+      }
+
+      return plain;
+    });
+
+    res.json(itemsWithStatus);
   } catch (err) {
     console.error("Error fetching menu items for manager:", err);
     res.status(500).json({ message: "Failed to fetch menu items", error: err.message });
@@ -768,11 +833,11 @@ exports.toggleMenuAvailability = async (req, res) => {
   }
 };
 
-// PUT /api/manager/menu/:id - Manager quick update for dish details/availability
+// PUT /api/manager/menu/:id - Manager quick update for dish details/availability & submit price for admin approval
 exports.updateMenuItem = async (req, res) => {
   try {
     const { id } = req.params;
-    const { isAvailable, status, price, description } = req.body;
+    const { isAvailable, status, price, description, reason } = req.body;
 
     const item = await MenuItem.findById(id);
     if (!item) {
@@ -788,14 +853,65 @@ exports.updateMenuItem = async (req, res) => {
       item.isAvailable = !isUnavailable;
     }
 
-    if (price !== undefined && !isNaN(price)) {
-      item.price = Number(price);
-    }
-
     if (description !== undefined) {
       item.description = description.trim();
     }
 
+    let priceChangeRequested = false;
+    let pendingRequestDoc = null;
+
+    if (price !== undefined && !isNaN(price)) {
+      const newPrice = Number(price);
+      if (newPrice !== item.price) {
+        // Price change requires Admin approval! Do NOT alter item.price directly.
+        priceChangeRequested = true;
+
+        // Upsert pending request for this menuItem
+        let existingReq = await PriceChangeRequest.findOne({
+          menuItem: item._id,
+          status: "Pending",
+        });
+
+        if (existingReq) {
+          existingReq.requestedPrice = newPrice;
+          existingReq.currentPrice = item.price;
+          if (reason) existingReq.reason = reason.trim();
+          existingReq.requestedBy = req.user.id;
+          existingReq.requestedByName = req.user.name || "Store Manager";
+          existingReq.requestedByEmail = req.user.email || "";
+          await existingReq.save();
+          pendingRequestDoc = existingReq;
+        } else {
+          pendingRequestDoc = await PriceChangeRequest.create({
+            menuItem: item._id,
+            dishName: item.name,
+            dishImage: item.image || item.imageUrl || "",
+            category: item.category || "Main Course",
+            currentPrice: item.price,
+            requestedPrice: newPrice,
+            reason: reason ? reason.trim() : "",
+            requestedBy: req.user.id,
+            requestedByName: req.user.name || "Store Manager",
+            requestedByEmail: req.user.email || "",
+            status: "Pending",
+          });
+        }
+
+        await AuditLog.create({
+          user: req.user.id,
+          action: "MANAGER_REQUESTED_PRICE_CHANGE",
+          targetId: String(item._id),
+          before: { price: item.price },
+          after: {
+            requestedPrice: newPrice,
+            dishName: item.name,
+            requestId: pendingRequestDoc._id,
+          },
+        });
+      }
+    }
+
+    // Save non-price updates to the dish
     await item.save();
 
     await AuditLog.create({
@@ -810,12 +926,103 @@ exports.updateMenuItem = async (req, res) => {
       },
     });
 
+    const responseItem = item.toObject();
+    if (priceChangeRequested && pendingRequestDoc) {
+      responseItem.pendingPriceChange = {
+        requestId: pendingRequestDoc._id,
+        requestedPrice: pendingRequestDoc.requestedPrice,
+        currentPrice: item.price,
+        reason: pendingRequestDoc.reason,
+        requestedByName: pendingRequestDoc.requestedByName,
+        createdAt: pendingRequestDoc.createdAt,
+      };
+      responseItem.priceApprovalStatus = "Pending";
+      responseItem.isPriceApproved = false;
+
+      return res.json({
+        message: `Dish details updated. Price change to ₹${pendingRequestDoc.requestedPrice} submitted for Admin approval.`,
+        priceChangePending: true,
+        pendingPrice: pendingRequestDoc.requestedPrice,
+        item: responseItem,
+      });
+    }
+
+    responseItem.priceApprovalStatus = "Approved";
+    responseItem.isPriceApproved = true;
+
     res.json({
       message: `Menu item "${item.name}" updated successfully`,
-      item,
+      priceChangePending: false,
+      item: responseItem,
     });
   } catch (err) {
     console.error("Error updating menu item by manager:", err);
     res.status(500).json({ message: "Failed to update menu item", error: err.message });
+  }
+};
+
+// GET /api/manager/price-requests - List price change requests submitted by managers
+exports.getPriceRequests = async (req, res) => {
+  try {
+    const requests = await PriceChangeRequest.find()
+      .populate("menuItem", "name category image imageUrl price status isAvailable")
+      .sort({ createdAt: -1 });
+
+    res.json(requests);
+  } catch (err) {
+    console.error("Error fetching price requests for manager:", err);
+    res.status(500).json({ message: "Failed to fetch price requests", error: err.message });
+  }
+};
+
+// ==========================================
+// 6. NOTIFICATIONS FOR MANAGER
+// ==========================================
+
+// GET /api/manager/notifications - Fetch manager notifications
+exports.getNotifications = async (req, res) => {
+  try {
+    const notifications = await Notification.find({ recipient: req.user.id })
+      .sort({ createdAt: -1 })
+      .limit(40);
+    const unreadCount = await Notification.countDocuments({
+      recipient: req.user.id,
+      status: "unread",
+    });
+
+    res.json({ notifications, unreadCount });
+  } catch (err) {
+    console.error("Error fetching manager notifications:", err);
+    res.status(500).json({ message: "Failed to fetch notifications", error: err.message });
+  }
+};
+
+// PATCH /api/manager/notifications/:id/read - Mark single notification as read
+exports.markNotificationRead = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const notif = await Notification.findOneAndUpdate(
+      { _id: id, recipient: req.user.id },
+      { status: "read" },
+      { new: true }
+    );
+    res.json({ message: "Notification marked as read", notification: notif });
+  } catch (err) {
+    console.error("Error updating notification status:", err);
+    res.status(500).json({ message: "Failed to update notification", error: err.message });
+  }
+};
+
+// PATCH /api/manager/notifications/read-all - Mark all notifications as read
+exports.markAllNotificationsRead = async (req, res) => {
+  try {
+    await Notification.updateMany(
+      { recipient: req.user.id, status: "unread" },
+      { status: "read" }
+    );
+    res.json({ message: "All notifications marked as read" });
+  } catch (err) {
+    console.error("Error marking all notifications as read:", err);
+    res.status(500).json({ message: "Failed to mark all notifications as read", error: err.message });
   }
 };

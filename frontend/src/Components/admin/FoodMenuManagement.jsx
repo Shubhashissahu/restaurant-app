@@ -20,7 +20,12 @@ import {
   LayoutGrid,
   List,
   Eye,
-  Camera
+  Camera,
+  Clock,
+  ArrowRight,
+  CheckCircle2,
+  XCircle,
+  FileText,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { resolveDishImage, CURATED_DISH_PRESETS, DEFAULT_FOOD_IMAGE } from "../../utils/imageUtils";
@@ -585,8 +590,18 @@ export default function FoodMenuManagement() {
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
 
+  // Price Change Approval Workflow States
+  const [activeTab, setActiveTab] = useState("catalog"); // 'catalog' | 'price-requests'
+  const [priceRequests, setPriceRequests] = useState([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+  const [requestFilter, setRequestFilter] = useState("all"); // 'all' | 'pending' | 'approved' | 'rejected'
+  const [actionProcessingId, setActionProcessingId] = useState(null);
+  const [rejectingItem, setRejectingItem] = useState(null);
+  const [rejectReason, setRejectReason] = useState("");
+
   useEffect(() => {
     fetchMenuItems();
+    fetchPriceRequests();
   }, []);
 
   const fetchMenuItems = async () => {
@@ -599,6 +614,86 @@ export default function FoodMenuManagement() {
       toast.error("Failed to load food menu items");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPriceRequests = async () => {
+    setLoadingRequests(true);
+    try {
+      const res = await api.get("/admin/price-requests");
+      setPriceRequests(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.error("Error fetching price requests for admin:", err);
+      toast.error("Failed to load price requests");
+    } finally {
+      setLoadingRequests(false);
+    }
+  };
+
+  const handleApproveRequest = async (request) => {
+    setActionProcessingId(request._id);
+    try {
+      const res = await api.patch(`/admin/price-requests/${request._id}/approve`, {});
+      toast.success(res.data?.message || `Approved price update for "${request.dishName}"!`, {
+        icon: "✅",
+      });
+
+      // Update dish in local menuItems list
+      setMenuItems((prev) =>
+        prev.map((item) =>
+          item._id === (request.menuItem?._id || request.menuItem)
+            ? { ...item, price: request.requestedPrice }
+            : item
+        )
+      );
+
+      // Update local request status
+      setPriceRequests((prev) =>
+        prev.map((r) =>
+          r._id === request._id
+            ? { ...r, status: "Approved", reviewedAt: new Date(), reviewedByName: "You" }
+            : r
+        )
+      );
+    } catch (err) {
+      console.error("Error approving price request:", err);
+      toast.error(err.response?.data?.message || "Failed to approve price change");
+    } finally {
+      setActionProcessingId(null);
+    }
+  };
+
+  const handleConfirmReject = async (e) => {
+    e.preventDefault();
+    if (!rejectingItem) return;
+
+    setActionProcessingId(rejectingItem._id);
+    try {
+      const res = await api.patch(`/admin/price-requests/${rejectingItem._id}/reject`, {
+        note: rejectReason,
+      });
+      toast.success(res.data?.message || `Price change request rejected`, { icon: "🚫" });
+
+      setPriceRequests((prev) =>
+        prev.map((r) =>
+          r._id === rejectingItem._id
+            ? {
+                ...r,
+                status: "Rejected",
+                reviewNote: rejectReason,
+                reviewedAt: new Date(),
+                reviewedByName: "You",
+              }
+            : r
+        )
+      );
+      setRejectingItem(null);
+      setRejectReason("");
+    } catch (err) {
+      console.error("Error rejecting price request:", err);
+      toast.error(err.response?.data?.message || "Failed to reject price change");
+    } finally {
+      setActionProcessingId(null);
     }
   };
 
@@ -642,12 +737,21 @@ export default function FoodMenuManagement() {
   const stats = useMemo(() => {
     const total = menuItems.length;
     const withPhotos = menuItems.filter((i) => Boolean(i.image || i.imageUrl)).length;
+    const pendingPriceCount = priceRequests.filter((r) => r.status === "Pending").length;
     return {
       total,
       withPhotos,
       photoPercent: total ? Math.round((withPhotos / total) * 100) : 0,
+      pendingPriceCount,
     };
-  }, [menuItems]);
+  }, [menuItems, priceRequests]);
+
+  const filteredRequests = useMemo(() => {
+    return priceRequests.filter((r) => {
+      if (requestFilter === "all") return true;
+      return r.status.toLowerCase() === requestFilter.toLowerCase();
+    });
+  }, [priceRequests, requestFilter]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
@@ -690,37 +794,103 @@ export default function FoodMenuManagement() {
       </div>
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
         <div className="bg-[#1E1E1E] border border-[#3A2E24] rounded-2xl p-5 shadow-xl">
           <p className="text-xs font-semibold uppercase tracking-wider text-[#C2B59B]">
             Total Dishes
           </p>
-          <p className="text-3xl font-extrabold text-[#FAF7F2] mt-1">{stats.total}</p>
-          <p className="text-xs text-[#8B7E6A] mt-1">Available in active food menu</p>
+          <p className="text-2xl sm:text-3xl font-extrabold text-[#FAF7F2] mt-1">{stats.total}</p>
+          <p className="text-xs text-[#8B7E6A] mt-1">Active menu dishes</p>
         </div>
 
         <div className="bg-[#1E1E1E] border border-[#3A2E24] rounded-2xl p-5 shadow-xl">
           <p className="text-xs font-semibold uppercase tracking-wider text-[#D4A373]">
             Dishes with Custom Photos
           </p>
-          <p className="text-3xl font-extrabold text-[#D4A373] mt-1">
+          <p className="text-2xl sm:text-3xl font-extrabold text-[#D4A373] mt-1">
             {stats.withPhotos}{" "}
             <span className="text-sm font-medium text-[#C2B59B]">({stats.photoPercent}%)</span>
           </p>
-          <p className="text-xs text-[#8B7E6A] mt-1">Custom uploaded or assigned photos</p>
+          <p className="text-xs text-[#8B7E6A] mt-1">Custom photos attached</p>
         </div>
 
         <div className="bg-[#1E1E1E] border border-[#3A2E24] rounded-2xl p-5 shadow-xl">
           <p className="text-xs font-semibold uppercase tracking-wider text-[#C2B59B]">
             Active Categories
           </p>
-          <p className="text-3xl font-extrabold text-[#FAF7F2] mt-1">{CATEGORIES.length - 1}</p>
-          <p className="text-xs text-[#8B7E6A] mt-1">Starters, Mains, Desserts, Beverages</p>
+          <p className="text-2xl sm:text-3xl font-extrabold text-[#FAF7F2] mt-1">{CATEGORIES.length - 1}</p>
+          <p className="text-xs text-[#8B7E6A] mt-1">Starters, Mains, etc.</p>
+        </div>
+
+        {/* Pending Price Approvals Metric Card */}
+        <div
+          onClick={() => setActiveTab("price-requests")}
+          className={`bg-[#1E1E1E] border rounded-2xl p-5 shadow-xl transition cursor-pointer ${
+            stats.pendingPriceCount > 0
+              ? "border-amber-500/40 hover:border-amber-400 bg-amber-500/5"
+              : "border-[#3A2E24] hover:border-[#D4A373]/40"
+          }`}
+        >
+          <p className="text-xs font-semibold uppercase tracking-wider text-amber-300 flex items-center justify-between">
+            <span>Price Approvals</span>
+            {stats.pendingPriceCount > 0 && (
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+            )}
+          </p>
+          <p className="text-2xl sm:text-3xl font-extrabold text-amber-300 mt-1">
+            {stats.pendingPriceCount}
+          </p>
+          <p className="text-xs text-[#8B7E6A] mt-1">
+            {stats.pendingPriceCount > 0 ? "Awaiting your review & approval" : "All requests resolved"}
+          </p>
         </div>
       </div>
 
-      {/* Controls Bar */}
-      <div className="rounded-2xl bg-[#1E1E1E] border border-[#3A2E24] p-6 shadow-xl space-y-5">
+      {/* Main Navigation Pill Tabs */}
+      <div className="flex items-center gap-3 border-b border-[#3A2E24] pb-3">
+        <button
+          type="button"
+          onClick={() => setActiveTab("catalog")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-bold transition cursor-pointer ${
+            activeTab === "catalog"
+              ? "bg-[#D4A373] text-[#141414] shadow-lg shadow-[#D4A373]/20"
+              : "text-[#C2B59B] hover:text-[#FAF7F2] hover:bg-[#2A2A2A]"
+          }`}
+        >
+          <UtensilsCrossed size={14} />
+          <span>Food Menu Catalog ({menuItems.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("price-requests")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-bold transition cursor-pointer ${
+            activeTab === "price-requests"
+              ? "bg-[#D4A373] text-[#141414] shadow-lg shadow-[#D4A373]/20"
+              : "text-[#C2B59B] hover:text-[#FAF7F2] hover:bg-[#2A2A2A]"
+          }`}
+        >
+          <Clock size={14} />
+          <span>Price Change Requests</span>
+          {stats.pendingPriceCount > 0 && (
+            <span
+              className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                activeTab === "price-requests"
+                  ? "bg-[#141414] text-[#D4A373]"
+                  : "bg-amber-400 text-[#141414] animate-pulse shadow-sm"
+              }`}
+            >
+              {stats.pendingPriceCount} Pending
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* TAB 1: FOOD CATALOG */}
+      {activeTab === "catalog" && (
+        <div className="space-y-6">
+          {/* Controls Bar */}
+          <div className="rounded-2xl bg-[#1E1E1E] border border-[#3A2E24] p-6 shadow-xl space-y-5">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           {/* Search Box */}
           <div className="relative w-full md:w-80">
@@ -893,6 +1063,263 @@ export default function FoodMenuManagement() {
           </div>
         )}
       </div>
+    </div>
+  )}
+
+      {/* TAB 2: PRICE CHANGE REQUESTS */}
+      {activeTab === "price-requests" && (
+        <div className="space-y-6">
+          {/* Sub-toolbar */}
+          <div className="rounded-2xl bg-[#1E1E1E] border border-[#3A2E24] p-5 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#8B7E6A]">Filter:</span>
+              {["all", "pending", "approved", "rejected"].map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => setRequestFilter(f)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition cursor-pointer ${
+                    requestFilter === f
+                      ? "bg-[#D4A373] text-[#141414] shadow-sm font-extrabold"
+                      : "bg-[#141414] text-[#C2B59B] hover:text-[#FAF7F2] border border-[#3A2E24]"
+                  }`}
+                >
+                  {f}
+                  {f === "pending" && stats.pendingPriceCount > 0 && ` (${stats.pendingPriceCount})`}
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={fetchPriceRequests}
+              disabled={loadingRequests}
+              className="self-start sm:self-auto flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#2A2A2A] hover:bg-[#333] text-[#FAF7F2] border border-[#3A2E24] text-xs font-bold transition cursor-pointer"
+            >
+              <RotateCw size={13} className={loadingRequests ? "animate-spin text-[#D4A373]" : ""} />
+              <span>Refresh Requests</span>
+            </button>
+          </div>
+
+          {/* Requests Content */}
+          {loadingRequests ? (
+            <div className="py-16 text-center text-[#8B7E6A] flex flex-col items-center justify-center gap-3">
+              <RotateCw size={24} className="animate-spin text-[#D4A373]" />
+              <p className="text-sm font-semibold">Loading price change requests...</p>
+            </div>
+          ) : filteredRequests.length === 0 ? (
+            <div className="p-12 text-center rounded-2xl bg-[#1E1E1E] border border-[#3A2E24]">
+              <FileText size={40} className="mx-auto text-[#3A2E24] mb-3" />
+              <h3 className="text-base font-bold text-[#FAF7F2]">No Price Change Requests</h3>
+              <p className="text-xs text-[#8B7E6A] mt-1">
+                {requestFilter === "pending"
+                  ? "Awesome! No pending dish price change requests awaiting approval."
+                  : "No requests found matching the selected filter."}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4">
+              {filteredRequests.map((req) => {
+                const priceDiff = Number(req.requestedPrice) - Number(req.currentPrice);
+                const percentDiff = req.currentPrice > 0 ? Math.round((priceDiff / req.currentPrice) * 100) : 0;
+                const isProcessing = actionProcessingId === req._id;
+
+                return (
+                  <div
+                    key={req._id}
+                    className={`p-5 rounded-3xl border transition-all duration-200 shadow-xl flex flex-col lg:flex-row lg:items-center justify-between gap-5 ${
+                      req.status === "Pending"
+                        ? "bg-[#1E1A17] border-amber-500/30 hover:border-amber-500/50"
+                        : req.status === "Approved"
+                        ? "bg-[#1A1E1A] border-emerald-500/20"
+                        : "bg-[#1E1A1A] border-rose-500/20 opacity-80"
+                    }`}
+                  >
+                    {/* Left: Dish info & price diff */}
+                    <div className="flex items-start gap-4">
+                      <div className="w-16 h-16 rounded-2xl overflow-hidden bg-[#141414] border border-[#3A2E24] shrink-0">
+                        <img
+                          src={resolveDishImage(req.dishImage, req.dishName, req.category)}
+                          alt={req.dishName}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.src = DEFAULT_FOOD_IMAGE;
+                          }}
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h4 className="text-base font-bold text-[#FAF7F2]">{req.dishName}</h4>
+                          <span className="text-[10px] uppercase tracking-wider font-extrabold px-2.5 py-0.5 rounded-full bg-[#141414] border border-[#3A2E24] text-[#D4A373]">
+                            {req.category || "Dish"}
+                          </span>
+                        </div>
+
+                        {/* Price Visualizer */}
+                        <div className="flex items-center gap-2 pt-1">
+                          <span className="text-xs text-[#8B7E6A] line-through font-semibold">
+                            ₹{req.currentPrice}
+                          </span>
+                          <ArrowRight size={14} className="text-[#D4A373]" />
+                          <span className="text-lg font-extrabold text-[#D4A373]">
+                            ₹{req.requestedPrice}
+                          </span>
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              priceDiff > 0
+                                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                                : priceDiff < 0
+                                ? "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                                : "bg-neutral-500/10 text-neutral-400"
+                            }`}
+                          >
+                            {priceDiff > 0 ? `+₹${priceDiff} (+${percentDiff}%)` : `₹${priceDiff} (${percentDiff}%)`}
+                          </span>
+                        </div>
+
+                        {/* Manager info & Reason */}
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#C2B59B] pt-1">
+                          <span>
+                            Requested by: <strong className="text-[#FAF7F2]">{req.requestedByName || "Store Manager"}</strong>
+                            {req.requestedByEmail && <span className="text-[#8B7E6A] ml-1">({req.requestedByEmail})</span>}
+                          </span>
+                          <span>•</span>
+                          <span className="text-[#8B7E6A] flex items-center gap-1">
+                            <Clock size={12} /> {new Date(req.createdAt).toLocaleString()}
+                          </span>
+                        </div>
+
+                        {req.reason && (
+                          <p className="text-xs text-amber-200/90 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-1 mt-2 inline-block">
+                            Manager Note: {req.reason}
+                          </p>
+                        )}
+
+                        {req.reviewNote && (
+                          <p className="text-xs text-[#C2B59B] bg-[#141414] border border-[#3A2E24] rounded-xl px-3 py-1 mt-1 inline-block">
+                            Admin Note: {req.reviewNote}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Right: Actions or Review Status */}
+                    <div className="flex items-center gap-2.5 self-end lg:self-center shrink-0">
+                      {req.status === "Pending" ? (
+                        <>
+                          <button
+                            type="button"
+                            disabled={isProcessing}
+                            onClick={() => handleApproveRequest(req)}
+                            className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-[#141414] font-extrabold text-xs shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition cursor-pointer"
+                          >
+                            <Check size={15} />
+                            <span>{isProcessing ? "Updating..." : `Approve ₹${req.requestedPrice}`}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={isProcessing}
+                            onClick={() => {
+                              setRejectingItem(req);
+                              setRejectReason("");
+                            }}
+                            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold text-xs hover:scale-105 active:scale-95 transition cursor-pointer"
+                          >
+                            <X size={15} />
+                            <span>Reject</span>
+                          </button>
+                        </>
+                      ) : (
+                        <div className="text-right space-y-1">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
+                              req.status === "Approved"
+                                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                                : "bg-rose-500/10 text-rose-400 border-rose-500/30"
+                            }`}
+                          >
+                            {req.status === "Approved" ? <CheckCircle2 size={13} /> : <XCircle size={13} />}
+                            <span>{req.status}</span>
+                          </span>
+                          <p className="text-[11px] text-[#8B7E6A]">
+                            Reviewed {req.reviewedAt ? new Date(req.reviewedAt).toLocaleDateString() : ""}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Reject Reason Modal */}
+      {rejectingItem && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-pop-in"
+          onClick={() => setRejectingItem(null)}
+        >
+          <div
+            className="w-full max-w-md bg-[#1C1815] border border-[#44362A] rounded-3xl p-6 sm:p-8 shadow-2xl space-y-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-[#3A2E24] pb-4">
+              <div>
+                <h3 className="text-lg font-bold text-rose-400">Reject Price Change</h3>
+                <p className="text-xs text-[#8B7E6A]">
+                  For {rejectingItem.dishName} (₹{rejectingItem.currentPrice} &rarr; ₹{rejectingItem.requestedPrice})
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRejectingItem(null)}
+                className="w-8 h-8 rounded-full bg-[#141414] text-[#C2B59B] hover:text-[#FAF7F2] flex items-center justify-center border border-[#3A2E24]"
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmReject} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#C2B59B] mb-1.5">
+                  Rejection Reason (will be shown to manager)
+                </label>
+                <textarea
+                  rows="3"
+                  required
+                  placeholder="e.g. Price increase is too high for current season, please adjust to ₹..."
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  className="w-full bg-[#141414] border border-[#3A2E24] rounded-xl px-4 py-2.5 text-xs text-[#FAF7F2] focus:border-rose-400 focus:outline-none resize-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#3A2E24]">
+                <button
+                  type="button"
+                  onClick={() => setRejectingItem(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-[#C2B59B] hover:text-[#FAF7F2] cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={actionProcessingId === rejectingItem._id}
+                  className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-lg transition cursor-pointer"
+                >
+                  {actionProcessingId === rejectingItem._id ? "Rejecting..." : "Confirm Rejection"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Modals */}
       {showModal && (
