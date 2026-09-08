@@ -30,5 +30,11 @@ router.delete("/reservations/:id", ctrl.deleteReservation);
 router.get("/menu", ctrl.getMenuItems);
 router.patch("/menu/:id/availability", ctrl.toggleMenuAvailability);
 router.put("/menu/:id", ctrl.updateMenuItem);
+router.get("/price-requests", ctrl.getPriceRequests);
+
+// Notifications routes
+router.get("/notifications", ctrl.getNotifications);
+router.patch("/notifications/:id/read", ctrl.markNotificationRead);
+router.patch("/notifications/read-all", ctrl.markAllNotificationsRead);
 
 module.exports = router;

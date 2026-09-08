@@ -17,6 +17,7 @@ import {
   UtensilsCrossed
 } from "lucide-react";
 import { NavLink, Routes, Route, useNavigate, Navigate } from "react-router-dom";
+import api from "../services/api";
 
 import Overview from "../components/admin/Overview";
 import FoodMenuManagement from "../components/admin/FoodMenuManagement";
@@ -32,6 +33,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [adminUser, setAdminUser] = useState({ name: "Admin", role: "Super Admin" });
+  const [pendingPriceRequestsCount, setPendingPriceRequestsCount] = useState(0);
 
   useEffect(() => {
     try {
@@ -47,6 +49,16 @@ export default function Dashboard() {
     } catch (e) {
       console.error(e);
     }
+
+    // Fetch stats for pending price approvals badge
+    api
+      .get("/admin/stats")
+      .then((res) => {
+        if (res.data && typeof res.data.pendingPriceRequests === "number") {
+          setPendingPriceRequestsCount(res.data.pendingPriceRequests);
+        }
+      })
+      .catch((e) => console.error("Error fetching admin stats:", e));
   }, []);
 
   // Sidebar Links
@@ -128,7 +140,14 @@ export default function Dashboard() {
                     <Icon size={18} className="transition-transform group-hover:scale-110" />
                     <span>{link.name}</span>
                   </div>
-                  <ChevronRight size={14} className="opacity-0 group-hover:opacity-60 transition-opacity" />
+                  <div className="flex items-center gap-2">
+                    {link.path === "food-menu" && pendingPriceRequestsCount > 0 && (
+                      <span className="px-2 py-0.5 rounded-full bg-amber-400 text-[#141414] text-[10px] font-extrabold animate-pulse shadow-sm">
+                        {pendingPriceRequestsCount}
+                      </span>
+                    )}
+                    <ChevronRight size={14} className="opacity-0 group-hover:opacity-60 transition-opacity" />
+                  </div>
                 </NavLink>
               );
             })}
