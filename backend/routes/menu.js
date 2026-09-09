@@ -7,6 +7,7 @@ const multer = require('multer');
 const MenuItem = require('../models/MenuItem');
 const verifyToken = require('../middleware/auth');
 const isAdmin = require('../middleware/isAdmin');
+const logAction = require('../utils/logger');
 
 // Configure multer storage for food photos
 const uploadDir = path.join(__dirname, '../public/uploads');
@@ -70,13 +71,15 @@ router.post('/upload', verifyToken, (req, res) => {
 // POST /api/menu — Add a new menu item
 router.post('/', verifyToken, async (req, res) => {
   try {
-    const { name, description, price, category, image, imageUrl } = req.body;
+    const { name, description, price, category, image, imageUrl, isAvailable, status } = req.body;
 
     if (!name || !description || price === undefined) {
       return res.status(400).json({ message: 'Name, description, and price are required' });
     }
 
     const resolvedImage = (image || imageUrl || '').trim();
+    const resolvedIsAvailable = typeof isAvailable === 'boolean' ? isAvailable : true;
+    const resolvedStatus = status || (resolvedIsAvailable ? 'Available' : 'Unavailable');
 
     const item = new MenuItem({
       name,
@@ -84,9 +87,22 @@ router.post('/', verifyToken, async (req, res) => {
       price,
       category: category || 'Main Course',
       image: resolvedImage,
-      imageUrl: resolvedImage
+      imageUrl: resolvedImage,
+      isAvailable: resolvedIsAvailable,
+      status: resolvedStatus
     });
     await item.save();
+
+    if (req.user?.id) {
+      await logAction(req.user.id, 'ADMIN_ADD_MENU_ITEM', item._id.toString(), null, {
+        name: item.name,
+        price: item.price,
+        category: item.category,
+        isAvailable: item.isAvailable,
+        status: item.status
+      });
+    }
+
     res.status(201).json({ message: 'Menu item added', item });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
@@ -193,9 +209,24 @@ router.patch('/:id/availability', verifyToken, async (req, res) => {
       isAvailable = !(item.isAvailable !== false && item.status !== 'Unavailable' && item.status !== 'Sold Out');
     }
 
+    const previousStatus = item.status || (item.isAvailable !== false ? 'Available' : 'Unavailable');
+    const previousAvailable = item.isAvailable !== false && item.status !== 'Unavailable' && item.status !== 'Sold Out';
+
     item.isAvailable = isAvailable;
     item.status = isAvailable ? 'Available' : 'Unavailable';
     await item.save();
+
+    if (req.user?.id) {
+      await logAction(req.user.id, 'ADMIN_UPDATE_MENU_AVAILABILITY', id, {
+        dishName: item.name,
+        status: previousStatus,
+        isAvailable: previousAvailable,
+      }, {
+        dishName: item.name,
+        status: item.status,
+        isAvailable: item.isAvailable,
+      });
+    }
 
     res.json({
       message: `Dish "${item.name}" is now marked as ${item.status}`,
