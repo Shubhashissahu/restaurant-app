@@ -38,14 +38,30 @@ const INPUT_STYLE =
 // --- Dish Item Modal with Multi-source Photo Picker ---
 export function FoodItemModal({ initial, onClose, onSubmit }) {
   const [form, setForm] = useState(
-    initial || {
-      name: "",
-      category: "Main Course",
-      price: "",
-      description: "",
-      image: "",
-      imageUrl: "",
-    }
+    initial
+      ? {
+          ...initial,
+          isAvailable:
+            initial.isAvailable !== false &&
+            initial.status !== "Unavailable" &&
+            initial.status !== "Sold Out",
+          status:
+            initial.isAvailable !== false &&
+            initial.status !== "Unavailable" &&
+            initial.status !== "Sold Out"
+              ? "Available"
+              : "Unavailable",
+        }
+      : {
+          name: "",
+          category: "Main Course",
+          price: "",
+          description: "",
+          image: "",
+          imageUrl: "",
+          isAvailable: true,
+          status: "Available",
+        }
   );
 
   const [photoTab, setPhotoTab] = useState("upload"); // 'upload' | 'url' | 'presets'
@@ -60,7 +76,15 @@ export function FoodItemModal({ initial, onClose, onSubmit }) {
   // Sync state when initial dish changes
   useEffect(() => {
     if (initial) {
-      setForm(initial);
+      const isAvail =
+        initial.isAvailable !== false &&
+        initial.status !== "Unavailable" &&
+        initial.status !== "Sold Out";
+      setForm({
+        ...initial,
+        isAvailable: isAvail,
+        status: isAvail ? "Available" : "Unavailable",
+      });
       const existingImg = initial.image || initial.imageUrl || "";
       setUrlInput(existingImg);
       setSelectedFile(null);
@@ -173,6 +197,8 @@ export function FoodItemModal({ initial, onClose, onSubmit }) {
         price: Number(form.price),
         image: finalImagePath,
         imageUrl: finalImagePath,
+        isAvailable: form.isAvailable !== false,
+        status: form.isAvailable !== false ? "Available" : "Unavailable",
       });
 
       onClose();
@@ -281,6 +307,62 @@ export function FoodItemModal({ initial, onClose, onSubmit }) {
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
             />
+          </div>
+
+          {/* Availability Status Selector */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-semibold text-[#C2B59B]">
+                Availability Status
+              </label>
+              <span
+                className={`text-[11px] font-bold ${
+                  form.isAvailable ? "text-emerald-400" : "text-rose-400"
+                }`}
+              >
+                {form.isAvailable
+                  ? "● In Stock & Live on Menu"
+                  : "● Out of Stock / Unavailable"}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() =>
+                  setForm((prev) => ({
+                    ...prev,
+                    isAvailable: true,
+                    status: "Available",
+                  }))
+                }
+                className={`py-3 px-3.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 border transition cursor-pointer ${
+                  form.isAvailable
+                    ? "bg-emerald-500/20 text-emerald-400 border-emerald-500 shadow-md shadow-emerald-500/10"
+                    : "bg-[#2A2A2A] text-[#8B7E6A] border-[#3A2E24] hover:text-[#FAF7F2]"
+                }`}
+              >
+                <CheckCircle2 size={16} />
+                <span>Available Today</span>
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setForm((prev) => ({
+                    ...prev,
+                    isAvailable: false,
+                    status: "Unavailable",
+                  }))
+                }
+                className={`py-3 px-3.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 border transition cursor-pointer ${
+                  !form.isAvailable
+                    ? "bg-rose-500/20 text-rose-400 border-rose-500 shadow-md shadow-rose-500/10"
+                    : "bg-[#2A2A2A] text-[#8B7E6A] border-[#3A2E24] hover:text-[#FAF7F2]"
+                }`}
+              >
+                <XCircle size={16} />
+                <span>Unavailable</span>
+              </button>
+            </div>
           </div>
 
           {/* PHOTO MANAGEMENT SECTION */}
@@ -488,12 +570,33 @@ export function FoodItemModal({ initial, onClose, onSubmit }) {
 }
 
 // --- Food Menu Card Component ---
-export function FoodMenuCard({ item, onEdit, onDelete }) {
-  const imageUrl = resolveDishImage(item.image || item.imageUrl, item.name, item.category);
+export function FoodMenuCard({
+  item,
+  onEdit,
+  onDelete,
+  onToggleAvailability,
+  togglingId,
+}) {
+  const imageUrl = resolveDishImage(
+    item.image || item.imageUrl,
+    item.name,
+    item.category
+  );
   const hasCustomPhoto = Boolean(item.image || item.imageUrl);
+  const isAvailable =
+    item.isAvailable !== false &&
+    item.status !== "Unavailable" &&
+    item.status !== "Sold Out";
+  const isToggling = togglingId === item._id;
 
   return (
-    <div className="group relative flex flex-col justify-between rounded-2xl bg-[#1E1E1E] border border-[#3A2E24] overflow-hidden transition-all duration-300 hover:border-[#D4A373]/50 hover:shadow-2xl hover:-translate-y-1">
+    <div
+      className={`group relative flex flex-col justify-between rounded-3xl bg-[#1E1E1E] border overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 ${
+        isAvailable
+          ? "border-[#3A2E24] hover:border-[#D4A373]/50"
+          : "border-rose-950/60 bg-[#1A1414] opacity-90 hover:border-rose-700/50"
+      }`}
+    >
       {/* Top Image Banner */}
       <div className="relative h-48 w-full overflow-hidden bg-[#242424]">
         <img
@@ -508,21 +611,37 @@ export function FoodMenuCard({ item, onEdit, onDelete }) {
         {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#1E1E1E] via-black/20 to-transparent" />
 
-        {/* Category Pill */}
-        <span className="absolute top-3 left-3 bg-[#1E1E1E]/90 backdrop-blur-md text-[#D4A373] text-[10px] font-extrabold uppercase tracking-wider px-3 py-1 rounded-full border border-[#3A2E24] shadow-md">
-          {item.category || "Main Course"}
-        </span>
+        {/* Top-Left: Category Pill & Photo Status */}
+        <div className="absolute top-3 left-3 flex items-center gap-1.5 flex-wrap max-w-[65%]">
+          <span className="bg-[#1E1E1E]/90 backdrop-blur-md text-[#D4A373] text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full border border-[#3A2E24] shadow-md">
+            {item.category || "Main Course"}
+          </span>
+          <span
+            className={`text-[9px] font-bold px-2 py-0.5 rounded-full border backdrop-blur-md shadow-md flex items-center gap-1 ${
+              hasCustomPhoto
+                ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                : "bg-black/60 text-[#8B7E6A] border-white/10"
+            }`}
+          >
+            <Camera size={9} />
+            {hasCustomPhoto ? "Photo" : "Default"}
+          </span>
+        </div>
 
-        {/* Custom Photo Indicator */}
+        {/* Top-Right: Availability Status Badge */}
         <span
-          className={`absolute top-3 right-3 text-[10px] font-bold px-2.5 py-1 rounded-full border backdrop-blur-md shadow-md flex items-center gap-1 ${
-            hasCustomPhoto
-              ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
-              : "bg-black/60 text-[#C2B59B] border-white/10"
+          className={`absolute top-3 right-3 text-[10px] font-extrabold uppercase tracking-wider px-3 py-1 rounded-full border backdrop-blur-md shadow-md flex items-center gap-1.5 ${
+            isAvailable
+              ? "bg-emerald-950/85 text-emerald-400 border-emerald-500/35"
+              : "bg-rose-950/85 text-rose-400 border-rose-500/35"
           }`}
         >
-          <Camera size={10} />
-          {hasCustomPhoto ? "Photo Attached" : "Default Photo"}
+          <span
+            className={`w-1.5 h-1.5 rounded-full ${
+              isAvailable ? "bg-emerald-400 animate-pulse" : "bg-rose-400"
+            }`}
+          />
+          {isAvailable ? "Available" : "Unavailable"}
         </span>
 
         {/* Price Tag in Image */}
@@ -535,7 +654,7 @@ export function FoodMenuCard({ item, onEdit, onDelete }) {
 
       {/* Card Body */}
       <div className="p-5 flex flex-col flex-1">
-        <h3 className="font-bold text-[#FAF7F2] text-lg leading-snug group-hover:text-[#D4A373] transition-colors mb-1.5">
+        <h3 className="font-bold text-[#FAF7F2] text-lg leading-snug group-hover:text-[#D4A373] transition-colors mb-1.5 line-clamp-1">
           {item.name}
         </h3>
 
@@ -550,29 +669,69 @@ export function FoodMenuCard({ item, onEdit, onDelete }) {
         )}
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-between pt-3 border-t border-[#3A2E24]/60 mt-auto">
+        <div className="pt-3 border-t border-[#3A2E24]/60 mt-auto space-y-2.5">
+          {/* Big Interactive Availability Toggle Switch */}
           <button
-            onClick={() => onEdit(item)}
-            className="flex items-center gap-1.5 text-xs text-[#D4A373] hover:text-[#FAF7F2] font-semibold px-3 py-1.5 rounded-lg hover:bg-[#2A2A2A] transition"
+            type="button"
+            disabled={isToggling}
+            onClick={() => onToggleAvailability?.(item)}
+            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all shadow-md cursor-pointer border ${
+              isAvailable
+                ? "bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                : "bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/30"
+            }`}
+            title={
+              isAvailable
+                ? "Click to set dish as Unavailable on menu"
+                : "Click to set dish as Available on menu"
+            }
           >
-            <Camera size={13} /> {hasCustomPhoto ? "Change Photo" : "Add Photo"}
+            <span className="flex items-center gap-1.5">
+              {isToggling ? (
+                <RotateCw size={14} className="animate-spin text-[#D4A373]" />
+              ) : isAvailable ? (
+                <Check size={14} />
+              ) : (
+                <X size={14} />
+              )}
+              <span>{isAvailable ? "Mark as Unavailable" : "Mark Available"}</span>
+            </span>
+
+            {/* Slider Pill Indicator */}
+            <div
+              className={`w-10 h-5 rounded-full p-0.5 flex items-center transition-colors ${
+                isAvailable ? "bg-emerald-500 justify-end" : "bg-rose-500 justify-start"
+              }`}
+            >
+              <div className="w-4 h-4 rounded-full bg-white shadow-md transform transition-transform" />
+            </div>
           </button>
 
-          <div className="flex items-center gap-1.5">
+          {/* Bottom Row Actions */}
+          <div className="flex items-center justify-between">
             <button
               onClick={() => onEdit(item)}
-              className="p-2 rounded-lg text-[#C2B59B] hover:text-[#FAF7F2] hover:bg-[#2A2A2A] transition"
-              title="Edit dish details"
+              className="flex items-center gap-1.5 text-xs text-[#D4A373] hover:text-[#FAF7F2] font-semibold px-2 py-1.5 rounded-lg hover:bg-[#2A2A2A] transition"
             >
-              <Pencil size={15} />
+              <Camera size={13} /> {hasCustomPhoto ? "Change Photo" : "Add Photo"}
             </button>
-            <button
-              onClick={() => onDelete(item._id)}
-              className="p-2 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition"
-              title="Delete dish"
-            >
-              <Trash2 size={15} />
-            </button>
+
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => onEdit(item)}
+                className="p-2 rounded-lg text-[#C2B59B] hover:text-[#FAF7F2] hover:bg-[#2A2A2A] transition"
+                title="Edit dish details"
+              >
+                <Pencil size={15} />
+              </button>
+              <button
+                onClick={() => onDelete(item._id)}
+                className="p-2 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition"
+                title="Delete dish"
+              >
+                <Trash2 size={15} />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -589,6 +748,8 @@ export default function FoodMenuManagement() {
   const [viewMode, setViewMode] = useState("grid"); // 'grid' | 'table'
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("all"); // 'all' | 'available' | 'unavailable'
+  const [togglingId, setTogglingId] = useState(null);
 
   // Price Change Approval Workflow States
   const [activeTab, setActiveTab] = useState("catalog"); // 'catalog' | 'price-requests'
@@ -722,24 +883,113 @@ export default function FoodMenuManagement() {
     }
   };
 
-  // Filtered menu items
+  // Real-time Availability Toggle (instant optimistic update like manager)
+  const handleToggleAvailability = async (item) => {
+    const currentIsAvailable =
+      item.isAvailable !== false &&
+      item.status !== "Unavailable" &&
+      item.status !== "Sold Out";
+    const nextIsAvailable = !currentIsAvailable;
+    const nextStatus = nextIsAvailable ? "Available" : "Unavailable";
+
+    // Optimistic UI update
+    setMenuItems((prev) =>
+      prev.map((i) =>
+        i._id === item._id
+          ? { ...i, isAvailable: nextIsAvailable, status: nextStatus }
+          : i
+      )
+    );
+    setTogglingId(item._id);
+
+    try {
+      const res = await api.patch(`/menu/${item._id}/availability`, {
+        isAvailable: nextIsAvailable,
+        status: nextStatus,
+      });
+
+      const updated = res.data?.item;
+      if (updated) {
+        setMenuItems((prev) =>
+          prev.map((i) => (i._id === item._id ? updated : i))
+        );
+      }
+
+      toast.success(
+        nextIsAvailable
+          ? `"${item.name}" is now Available on customer menu`
+          : `"${item.name}" marked as Unavailable`,
+        {
+          icon: nextIsAvailable ? "✅" : "🚫",
+          style: {
+            background: "#1E1E1E",
+            color: "#FAF7F2",
+            border: "1px solid #3A2E24",
+          },
+        }
+      );
+    } catch (err) {
+      console.error("Error toggling dish availability:", err);
+      // Revert optimistic update on failure
+      setMenuItems((prev) =>
+        prev.map((i) =>
+          i._id === item._id
+            ? { ...i, isAvailable: currentIsAvailable, status: item.status }
+            : i
+        )
+      );
+      toast.error(
+        err.response?.data?.message || `Failed to update status for "${item.name}"`
+      );
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  // Filtered menu items (matching category, search, and availability status)
   const filteredItems = useMemo(() => {
     return menuItems.filter((item) => {
+      const isAvailable =
+        item.isAvailable !== false &&
+        item.status !== "Unavailable" &&
+        item.status !== "Sold Out";
+
+      const q = searchQuery.trim().toLowerCase();
       const matchSearch =
-        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (item.description || "").toLowerCase().includes(searchQuery.toLowerCase());
+        q === "" ||
+        (item.name && item.name.toLowerCase().includes(q)) ||
+        (item.description && item.description.toLowerCase().includes(q)) ||
+        (item.category && item.category.toLowerCase().includes(q));
+
       const matchCategory =
-        selectedCategory === "All" || item.category === selectedCategory;
-      return matchSearch && matchCategory;
+        selectedCategory === "All" ||
+        (item.category || "").toLowerCase() === selectedCategory.toLowerCase();
+
+      let matchStatus = true;
+      if (statusFilter === "available") matchStatus = isAvailable;
+      if (statusFilter === "unavailable") matchStatus = !isAvailable;
+
+      return matchSearch && matchCategory && matchStatus;
     });
-  }, [menuItems, searchQuery, selectedCategory]);
+  }, [menuItems, searchQuery, selectedCategory, statusFilter]);
 
   const stats = useMemo(() => {
     const total = menuItems.length;
+    const available = menuItems.filter(
+      (i) =>
+        i.isAvailable !== false &&
+        i.status !== "Unavailable" &&
+        i.status !== "Sold Out"
+    ).length;
+    const unavailable = total - available;
+    const availablePercent = total > 0 ? Math.round((available / total) * 100) : 0;
     const withPhotos = menuItems.filter((i) => Boolean(i.image || i.imageUrl)).length;
     const pendingPriceCount = priceRequests.filter((r) => r.status === "Pending").length;
     return {
       total,
+      available,
+      unavailable,
+      availablePercent,
       withPhotos,
       photoPercent: total ? Math.round((withPhotos / total) * 100) : 0,
       pendingPriceCount,
@@ -794,42 +1044,94 @@ export default function FoodMenuManagement() {
       </div>
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-        <div className="bg-[#1E1E1E] border border-[#3A2E24] rounded-2xl p-5 shadow-xl">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        {/* Total Dishes */}
+        <div className="bg-[#1E1E1E] border border-[#3A2E24] rounded-2xl p-4 sm:p-5 shadow-xl">
           <p className="text-xs font-semibold uppercase tracking-wider text-[#C2B59B]">
             Total Dishes
           </p>
           <p className="text-2xl sm:text-3xl font-extrabold text-[#FAF7F2] mt-1">{stats.total}</p>
-          <p className="text-xs text-[#8B7E6A] mt-1">Active menu dishes</p>
+          <p className="text-xs text-[#8B7E6A] mt-1">Catalog items</p>
         </div>
 
-        <div className="bg-[#1E1E1E] border border-[#3A2E24] rounded-2xl p-5 shadow-xl">
+        {/* Available Today (Clickable Filter) */}
+        <div
+          onClick={() =>
+            setStatusFilter((prev) => (prev === "available" ? "all" : "available"))
+          }
+          className={`border rounded-2xl p-4 sm:p-5 shadow-xl transition cursor-pointer ${
+            statusFilter === "available"
+              ? "bg-emerald-500/15 border-emerald-500 ring-2 ring-emerald-500/20"
+              : "bg-[#1E1E1E] border-[#3A2E24] hover:border-emerald-500/40"
+          }`}
+          title="Click to filter Available dishes"
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
+              Available
+            </p>
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          </div>
+          <p className="text-2xl sm:text-3xl font-extrabold text-emerald-400 mt-1">
+            {stats.available}{" "}
+            <span className="text-xs font-medium text-[#C2B59B]">
+              ({stats.availablePercent}%)
+            </span>
+          </p>
+          <p className="text-xs text-[#8B7E6A] mt-1">
+            {statusFilter === "available" ? "Active filter applied" : "Ready to order"}
+          </p>
+        </div>
+
+        {/* Unavailable (Clickable Filter) */}
+        <div
+          onClick={() =>
+            setStatusFilter((prev) => (prev === "unavailable" ? "all" : "unavailable"))
+          }
+          className={`border rounded-2xl p-4 sm:p-5 shadow-xl transition cursor-pointer ${
+            statusFilter === "unavailable"
+              ? "bg-rose-500/15 border-rose-500 ring-2 ring-rose-500/20"
+              : "bg-[#1E1E1E] border-[#3A2E24] hover:border-rose-500/40"
+          }`}
+          title="Click to filter Unavailable dishes"
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-wider text-rose-400">
+              Unavailable
+            </p>
+            <span className="w-2 h-2 rounded-full bg-rose-400" />
+          </div>
+          <p className="text-2xl sm:text-3xl font-extrabold text-rose-400 mt-1">
+            {stats.unavailable}
+          </p>
+          <p className="text-xs text-[#8B7E6A] mt-1">
+            {statusFilter === "unavailable" ? "Active filter applied" : "Out of stock / paused"}
+          </p>
+        </div>
+
+        {/* Dishes with Photos */}
+        <div className="bg-[#1E1E1E] border border-[#3A2E24] rounded-2xl p-4 sm:p-5 shadow-xl">
           <p className="text-xs font-semibold uppercase tracking-wider text-[#D4A373]">
-            Dishes with Custom Photos
+            With Photos
           </p>
           <p className="text-2xl sm:text-3xl font-extrabold text-[#D4A373] mt-1">
             {stats.withPhotos}{" "}
-            <span className="text-sm font-medium text-[#C2B59B]">({stats.photoPercent}%)</span>
+            <span className="text-xs font-medium text-[#C2B59B]">
+              ({stats.photoPercent}%)
+            </span>
           </p>
           <p className="text-xs text-[#8B7E6A] mt-1">Custom photos attached</p>
-        </div>
-
-        <div className="bg-[#1E1E1E] border border-[#3A2E24] rounded-2xl p-5 shadow-xl">
-          <p className="text-xs font-semibold uppercase tracking-wider text-[#C2B59B]">
-            Active Categories
-          </p>
-          <p className="text-2xl sm:text-3xl font-extrabold text-[#FAF7F2] mt-1">{CATEGORIES.length - 1}</p>
-          <p className="text-xs text-[#8B7E6A] mt-1">Starters, Mains, etc.</p>
         </div>
 
         {/* Pending Price Approvals Metric Card */}
         <div
           onClick={() => setActiveTab("price-requests")}
-          className={`bg-[#1E1E1E] border rounded-2xl p-5 shadow-xl transition cursor-pointer ${
+          className={`bg-[#1E1E1E] border rounded-2xl p-4 sm:p-5 shadow-xl transition cursor-pointer ${
             stats.pendingPriceCount > 0
               ? "border-amber-500/40 hover:border-amber-400 bg-amber-500/5"
               : "border-[#3A2E24] hover:border-[#D4A373]/40"
           }`}
+          title="Click to view price change requests"
         >
           <p className="text-xs font-semibold uppercase tracking-wider text-amber-300 flex items-center justify-between">
             <span>Price Approvals</span>
@@ -841,7 +1143,7 @@ export default function FoodMenuManagement() {
             {stats.pendingPriceCount}
           </p>
           <p className="text-xs text-[#8B7E6A] mt-1">
-            {stats.pendingPriceCount > 0 ? "Awaiting your review & approval" : "All requests resolved"}
+            {stats.pendingPriceCount > 0 ? "Awaiting your review" : "All resolved"}
           </p>
         </div>
       </div>
@@ -891,178 +1193,312 @@ export default function FoodMenuManagement() {
         <div className="space-y-6">
           {/* Controls Bar */}
           <div className="rounded-2xl bg-[#1E1E1E] border border-[#3A2E24] p-6 shadow-xl space-y-5">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          {/* Search Box */}
-          <div className="relative w-full md:w-80">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8B7E6A]" />
-            <input
-              type="text"
-              placeholder="Search dishes or recipes..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#2A2A2A] border border-[#3A2E24] rounded-xl pl-10 pr-4 py-2.5 text-xs text-[#FAF7F2] placeholder:text-[#8B7E6A] focus:outline-none focus:border-[#D4A373] transition"
-            />
-          </div>
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              {/* Search Box */}
+              <div className="relative w-full lg:w-80">
+                <Search
+                  size={16}
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8B7E6A]"
+                />
+                <input
+                  type="text"
+                  placeholder="Search dishes, recipes, ingredients..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-[#2A2A2A] border border-[#3A2E24] rounded-xl pl-10 pr-4 py-2.5 text-xs text-[#FAF7F2] placeholder:text-[#8B7E6A] focus:outline-none focus:border-[#D4A373] transition"
+                />
+              </div>
 
-          {/* View Mode Toggle */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-[#C2B59B] mr-1 hidden sm:inline">View:</span>
-            <div className="flex bg-[#141414] p-1 rounded-xl border border-[#3A2E24]">
-              <button
-                onClick={() => setViewMode("grid")}
-                className={`p-1.5 rounded-lg text-xs transition ${
-                  viewMode === "grid"
-                    ? "bg-[#D4A373] text-[#141414]"
-                    : "text-[#C2B59B] hover:text-[#FAF7F2]"
-                }`}
-                title="Grid cards with photo"
-              >
-                <LayoutGrid size={16} />
-              </button>
-              <button
-                onClick={() => setViewMode("table")}
-                className={`p-1.5 rounded-lg text-xs transition ${
-                  viewMode === "table"
-                    ? "bg-[#D4A373] text-[#141414]"
-                    : "text-[#C2B59B] hover:text-[#FAF7F2]"
-                }`}
-                title="Compact table view"
-              >
-                <List size={16} />
-              </button>
+              {/* Status Filters & View Mode */}
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Availability Status Filter Pills */}
+                <div className="flex items-center gap-1.5 bg-[#141414] p-1 rounded-xl border border-[#3A2E24]">
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter("all")}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                      statusFilter === "all"
+                        ? "bg-[#D4A373] text-[#141414] shadow-sm"
+                        : "text-[#C2B59B] hover:text-[#FAF7F2]"
+                    }`}
+                  >
+                    All ({menuItems.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter("available")}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                      statusFilter === "available"
+                        ? "bg-emerald-500 text-[#141414] shadow-sm font-extrabold"
+                        : "text-emerald-400 hover:bg-emerald-500/10"
+                    }`}
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        statusFilter === "available" ? "bg-[#141414]" : "bg-emerald-400 animate-pulse"
+                      }`}
+                    />
+                    Available ({stats.available})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter("unavailable")}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                      statusFilter === "unavailable"
+                        ? "bg-rose-500 text-white shadow-sm font-extrabold"
+                        : "text-rose-400 hover:bg-rose-500/10"
+                    }`}
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        statusFilter === "unavailable" ? "bg-white" : "bg-rose-400"
+                      }`}
+                    />
+                    Unavailable ({stats.unavailable})
+                  </button>
+                </div>
+
+                {/* View Mode Toggle */}
+                <div className="flex items-center gap-2">
+                  <div className="flex bg-[#141414] p-1 rounded-xl border border-[#3A2E24]">
+                    <button
+                      onClick={() => setViewMode("grid")}
+                      className={`p-1.5 rounded-lg text-xs transition ${
+                        viewMode === "grid"
+                          ? "bg-[#D4A373] text-[#141414]"
+                          : "text-[#C2B59B] hover:text-[#FAF7F2]"
+                      }`}
+                      title="Grid cards with photo"
+                    >
+                      <LayoutGrid size={16} />
+                    </button>
+                    <button
+                      onClick={() => setViewMode("table")}
+                      className={`p-1.5 rounded-lg text-xs transition ${
+                        viewMode === "table"
+                          ? "bg-[#D4A373] text-[#141414]"
+                          : "text-[#C2B59B] hover:text-[#FAF7F2]"
+                      }`}
+                      title="Compact table view"
+                    >
+                      <List size={16} />
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
-        {/* Category Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-          <Filter size={14} className="text-[#8B7E6A] mr-1 flex-shrink-0" />
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-4 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-200 ${
-                selectedCategory === cat
-                  ? "bg-[#D4A373] text-[#141414] shadow-md shadow-[#D4A373]/20"
-                  : "bg-[#2A2A2A] text-[#C2B59B] hover:text-[#FAF7F2] hover:bg-[#333333] border border-[#3A2E24]"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
+            {/* Category Pills & Active Filter Reset */}
+            <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 scrollbar-none">
+              <div className="flex items-center gap-2">
+                <Filter size={14} className="text-[#8B7E6A] mr-1 flex-shrink-0" />
+                {CATEGORIES.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`px-4 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-200 ${
+                      selectedCategory === cat
+                        ? "bg-[#D4A373] text-[#141414] shadow-md shadow-[#D4A373]/20 font-bold"
+                        : "bg-[#2A2A2A] text-[#C2B59B] hover:text-[#FAF7F2] hover:bg-[#333333] border border-[#3A2E24]"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
 
-        {/* Dishes Display */}
-        {loading ? (
-          <div className="py-20 text-center text-[#C2B59B]">
-            <RotateCw size={28} className="animate-spin mx-auto text-[#D4A373] mb-2" />
-            Loading food catalog items...
-          </div>
-        ) : filteredItems.length === 0 ? (
-          <div className="py-16 text-center rounded-2xl border border-dashed border-[#3A2E24] p-8 space-y-3">
-            <ChefHat size={40} className="mx-auto text-[#8B7E6A]" />
-            <p className="text-base font-semibold text-[#FAF7F2]">
-              {searchQuery || selectedCategory !== "All"
-                ? "No food dishes matched your search."
-                : "No dishes added yet."}
-            </p>
-            <p className="text-xs text-[#C2B59B] max-w-sm mx-auto">
-              {searchQuery || selectedCategory !== "All"
-                ? "Try adjusting your search keywords or switching category."
-                : "Click '+ Add Food Item' above to introduce your first recipe with photo."}
-            </p>
-            {(searchQuery || selectedCategory !== "All") && (
-              <button
-                onClick={() => {
-                  setSearchQuery("");
-                  setSelectedCategory("All");
-                }}
-                className="text-xs font-semibold text-[#D4A373] hover:underline"
-              >
-                Clear all filters
-              </button>
+              {(searchQuery || selectedCategory !== "All" || statusFilter !== "all") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSelectedCategory("All");
+                    setStatusFilter("all");
+                  }}
+                  className="px-3 py-1 rounded-xl text-xs font-bold text-[#D4A373] hover:text-white hover:bg-[#2A2A2A] border border-[#D4A373]/40 whitespace-nowrap transition shrink-0"
+                >
+                  Reset All Filters
+                </button>
+              )}
+            </div>
+
+            {/* Dishes Display */}
+            {loading ? (
+              <div className="py-20 text-center text-[#C2B59B]">
+                <RotateCw size={28} className="animate-spin mx-auto text-[#D4A373] mb-2" />
+                Loading food catalog items...
+              </div>
+            ) : filteredItems.length === 0 ? (
+              <div className="py-16 text-center rounded-2xl border border-dashed border-[#3A2E24] p-8 space-y-3">
+                <ChefHat size={40} className="mx-auto text-[#8B7E6A]" />
+                <p className="text-base font-semibold text-[#FAF7F2]">
+                  {searchQuery || selectedCategory !== "All" || statusFilter !== "all"
+                    ? "No food dishes matched your filter criteria."
+                    : "No dishes added yet."}
+                </p>
+                <p className="text-xs text-[#C2B59B] max-w-sm mx-auto">
+                  {searchQuery || selectedCategory !== "All" || statusFilter !== "all"
+                    ? "Try switching your category or availability filter, or adjusting your search keywords."
+                    : "Click '+ Add Food Item' above to introduce your first recipe with photo."}
+                </p>
+                {(searchQuery || selectedCategory !== "All" || statusFilter !== "all") && (
+                  <button
+                    onClick={() => {
+                      setSearchQuery("");
+                      setSelectedCategory("All");
+                      setStatusFilter("all");
+                    }}
+                    className="text-xs font-semibold text-[#D4A373] hover:underline"
+                  >
+                    Clear all filters
+                  </button>
+                )}
+              </div>
+            ) : viewMode === "grid" ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pt-2">
+                {filteredItems.map((item) => (
+                  <FoodMenuCard
+                    key={item._id}
+                    item={item}
+                    onEdit={setEditItem}
+                    onDelete={handleDeleteItem}
+                    onToggleAvailability={handleToggleAvailability}
+                    togglingId={togglingId}
+                  />
+                ))}
+              </div>
+            ) : (
+              /* Table View */
+              <div className="overflow-x-auto rounded-2xl border border-[#3A2E24]">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-[#3A2E24] bg-[#141414] text-[#8B7E6A] text-[11px] font-bold uppercase tracking-wider">
+                      <th className="py-3.5 px-4">Photo</th>
+                      <th className="py-3.5 px-4">Dish Name</th>
+                      <th className="py-3.5 px-4">Category</th>
+                      <th className="py-3.5 px-4">Price</th>
+                      <th className="py-3.5 px-4">Availability</th>
+                      <th className="py-3.5 px-4">Description</th>
+                      <th className="py-3.5 px-4 text-center">Toggle Status</th>
+                      <th className="py-3.5 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#3A2E24]/60 text-sm">
+                    {filteredItems.map((item) => {
+                      const img = resolveDishImage(
+                        item.image || item.imageUrl,
+                        item.name,
+                        item.category
+                      );
+                      const isAvailable =
+                        item.isAvailable !== false &&
+                        item.status !== "Unavailable" &&
+                        item.status !== "Sold Out";
+                      const isToggling = togglingId === item._id;
+
+                      return (
+                        <tr
+                          key={item._id}
+                          className={`hover:bg-[#2A2A2A]/40 transition ${
+                            !isAvailable ? "bg-[#1A1414]/50" : ""
+                          }`}
+                        >
+                          <td className="py-3 px-4">
+                            <div className="w-12 h-12 rounded-xl overflow-hidden border border-[#3A2E24] bg-[#141414]">
+                              <img
+                                src={img}
+                                alt={item.name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.target.src = DEFAULT_FOOD_IMAGE;
+                                }}
+                              />
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 font-semibold text-[#FAF7F2]">
+                            {item.name}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="text-xs bg-[#2A2A2A] text-[#D4A373] px-2.5 py-1 rounded-full border border-[#3A2E24]">
+                              {item.category || "Main Course"}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 font-bold text-[#D4A373]">
+                            ₹{Number(item.price || 0).toLocaleString("en-IN")}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider border ${
+                                isAvailable
+                                  ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                                  : "bg-rose-500/15 text-rose-400 border-rose-500/30"
+                              }`}
+                            >
+                              <span
+                                className={`w-1.5 h-1.5 rounded-full ${
+                                  isAvailable
+                                    ? "bg-emerald-400 animate-pulse"
+                                    : "bg-rose-400"
+                                }`}
+                              />
+                              {isAvailable ? "Available" : "Unavailable"}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-xs text-[#C2B59B] max-w-xs truncate">
+                            {item.description || "—"}
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <button
+                              type="button"
+                              disabled={isToggling}
+                              onClick={() => handleToggleAvailability(item)}
+                              className={`px-3 py-1.5 rounded-xl font-bold text-xs border transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                                isAvailable
+                                  ? "bg-rose-500/10 text-rose-400 border-rose-500/30 hover:bg-rose-500/20"
+                                  : "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
+                              }`}
+                              title={
+                                isAvailable
+                                  ? "Click to set dish as Unavailable"
+                                  : "Click to set dish as Available"
+                              }
+                            >
+                              {isToggling ? (
+                                <RotateCw size={13} className="animate-spin text-[#D4A373]" />
+                              ) : isAvailable ? (
+                                <X size={13} />
+                              ) : (
+                                <Check size={13} />
+                              )}
+                              <span>{isAvailable ? "Set Unavailable" : "Set Available"}</span>
+                            </button>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => setEditItem(item)}
+                                className="p-1.5 rounded-lg text-[#D4A373] hover:text-[#FAF7F2] hover:bg-[#2A2A2A] transition"
+                                title="Edit dish and photo"
+                              >
+                                <Pencil size={15} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteItem(item._id)}
+                                className="p-1.5 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition"
+                                title="Delete dish"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
-        ) : viewMode === "grid" ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pt-2">
-            {filteredItems.map((item) => (
-              <FoodMenuCard
-                key={item._id}
-                item={item}
-                onEdit={setEditItem}
-                onDelete={handleDeleteItem}
-              />
-            ))}
-          </div>
-        ) : (
-          /* Table View */
-          <div className="overflow-x-auto rounded-2xl border border-[#3A2E24]">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-[#3A2E24] bg-[#141414] text-[#8B7E6A] text-[11px] font-bold uppercase tracking-wider">
-                  <th className="py-3.5 px-4">Photo</th>
-                  <th className="py-3.5 px-4">Dish Name</th>
-                  <th className="py-3.5 px-4">Category</th>
-                  <th className="py-3.5 px-4">Price</th>
-                  <th className="py-3.5 px-4">Description</th>
-                  <th className="py-3.5 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#3A2E24]/60 text-sm">
-                {filteredItems.map((item) => {
-                  const img = resolveDishImage(item.image || item.imageUrl, item.name, item.category);
-                  return (
-                    <tr key={item._id} className="hover:bg-[#2A2A2A]/40 transition">
-                      <td className="py-3 px-4">
-                        <div className="w-12 h-12 rounded-xl overflow-hidden border border-[#3A2E24] bg-[#141414]">
-                          <img
-                            src={img}
-                            alt={item.name}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              e.target.src = DEFAULT_FOOD_IMAGE;
-                            }}
-                          />
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 font-semibold text-[#FAF7F2]">{item.name}</td>
-                      <td className="py-3 px-4">
-                        <span className="text-xs bg-[#2A2A2A] text-[#D4A373] px-2.5 py-1 rounded-full border border-[#3A2E24]">
-                          {item.category || "Main Course"}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 font-bold text-[#D4A373]">
-                        ₹{Number(item.price || 0).toLocaleString("en-IN")}
-                      </td>
-                      <td className="py-3 px-4 text-xs text-[#C2B59B] max-w-xs truncate">
-                        {item.description || "—"}
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => setEditItem(item)}
-                            className="p-1.5 rounded-lg text-[#D4A373] hover:text-[#FAF7F2] hover:bg-[#2A2A2A] transition"
-                            title="Edit dish and photo"
-                          >
-                            <Pencil size={15} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteItem(item._id)}
-                            className="p-1.5 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition"
-                            title="Delete dish"
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
     </div>
   )}
 
