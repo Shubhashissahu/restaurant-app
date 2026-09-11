@@ -431,7 +431,7 @@ export default function ConsumerForm() {
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-[#FAF7F2]">
-                        {userProfile.name || "Authenticated Diner"}
+                        {userProfile.name || "Authenticated User"}
                       </span>
                       <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 text-[10px] font-semibold uppercase tracking-wider">
                         Verified Account
