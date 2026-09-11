@@ -209,9 +209,7 @@ export default function SignUp({ setToken }) {
                   {roles.length === 0 && <option value="">Loading roles...</option>}
                   {roles.map((role) => (
                     <option key={role._id} value={role._id}>
-                      {role.name === "user"
-                        ? "Diner (Reservations & Orders)"
-                        : role.name.charAt(0).toUpperCase() + role.name.slice(1)}
+                      {role.name.charAt(0).toUpperCase() + role.name.slice(1)}
                     </option>
                   ))}
                 </select>
