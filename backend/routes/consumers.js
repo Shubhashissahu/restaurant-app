@@ -6,8 +6,26 @@ const verifyToken = require('../middleware/auth');
 const isAdmin = require('../middleware/isAdmin');
 const isManager = require('../middleware/isManager');
 
-// POST /api/consumers — Register a new consumer / reserve a table
-router.post('/', async (req, res) => {
+// GET /api/consumers/mine — Fetch reservations for the logged-in user
+router.get('/mine', verifyToken, async (req, res) => {
+  try {
+    const filter = {
+      $or: [
+        { userId: req.user.id }
+      ]
+    };
+    if (req.user.email) {
+      filter.$or.push({ email: req.user.email.toLowerCase() });
+    }
+    const reservations = await Consumer.find(filter).sort({ createdAt: -1 });
+    res.json(reservations);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
+
+// POST /api/consumers — Register a new consumer / reserve a table (Login required)
+router.post('/', verifyToken, async (req, res) => {
   try {
     const {
       name,
@@ -29,13 +47,20 @@ router.post('/', async (req, res) => {
     }
 
     const bookingCode = `TH-${Math.floor(100000 + Math.random() * 900000)}`;
+    const effectiveEmail = (email && email.trim() !== '') ? email.trim().toLowerCase() : (req.user?.email || '');
 
     // If consumer email provided and exists, update their latest table reservation
     let existing = null;
-    if (email && email.trim() !== '') {
-      existing = await Consumer.findOne({ email: email.trim().toLowerCase() });
+    if (effectiveEmail) {
+      existing = await Consumer.findOne({
+        $or: [
+          { email: effectiveEmail },
+          ...(req.user?.id ? [{ userId: req.user.id }] : [])
+        ]
+      });
     }
     if (existing) {
+      existing.userId = req.user?.id || existing.userId;
       existing.name = name;
       existing.phone = phone;
       existing.partyType = partyType || existing.partyType;
@@ -57,8 +82,9 @@ router.post('/', async (req, res) => {
     }
 
     const consumer = new Consumer({
+      userId: req.user?.id || null,
       name,
-      email,
+      email: effectiveEmail,
       phone,
       partyType,
       customOccasion,

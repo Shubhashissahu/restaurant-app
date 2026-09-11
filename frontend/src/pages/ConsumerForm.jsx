@@ -74,9 +74,35 @@ export default function ConsumerForm() {
     []
   );
 
+  const userProfile = useMemo(() => {
+    const token = localStorage.getItem("token");
+    let name = localStorage.getItem("userName") || "";
+    let email = localStorage.getItem("userEmail") || "";
+    let role = localStorage.getItem("role") || "";
+    let isAuthenticated = false;
+
+    if (token) {
+      try {
+        const parts = token.split(".");
+        if (parts.length === 3) {
+          const payload = JSON.parse(atob(parts[1]));
+          if (!payload.exp || Date.now() < payload.exp * 1000) {
+            isAuthenticated = true;
+            if (!name && payload.name) name = payload.name;
+            if (!email && payload.email) email = payload.email;
+            if (!role && payload.role) role = payload.role;
+          }
+        }
+      } catch (e) {
+        console.error("Error reading token in ConsumerForm", e);
+      }
+    }
+    return { isAuthenticated, name, email, role, token };
+  }, []);
+
   const [form, setForm] = useState({
-    name: "",
-    email: "",
+    name: userProfile.name || "",
+    email: userProfile.email || "",
     phone: "",
     partyType: "Couple",
     customOccasion: "",
@@ -207,8 +233,8 @@ export default function ConsumerForm() {
   const handleReset = () => {
     setConfirmedBooking(null);
     setForm({
-      name: "",
-      email: "",
+      name: userProfile.name || "",
+      email: userProfile.email || "",
       phone: "",
       partyType: "Couple",
       customOccasion: "",
@@ -343,6 +369,50 @@ export default function ConsumerForm() {
                 </Link>
               </div>
             </div>
+          ) : !userProfile.isAuthenticated ? (
+            /* ---------------- AUTHENTICATION REQUIRED CARD ---------------- */
+            <div className="bg-[#181818]/95 border border-[#3A2E24] rounded-3xl p-8 sm:p-12 shadow-2xl backdrop-blur-2xl relative overflow-hidden text-center max-w-xl mx-auto animate-slide-up">
+              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#D4A373] via-[#FAF7F2] to-[#8B5E3C]"></div>
+
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#D4A373] to-[#8B5E3C] text-[#141414] flex items-center justify-center mx-auto mb-4 shadow-xl shadow-[#D4A373]/20 ring-4 ring-[#D4A373]/15">
+                <ShieldCheck size={32} />
+              </div>
+
+              <span className="inline-block px-3.5 py-1 rounded-full bg-[#D4A373]/10 text-[#D4A373] border border-[#D4A373]/20 text-xs font-bold uppercase tracking-wider mb-2">
+                Authentication Required
+              </span>
+
+              <h2 className="text-2xl sm:text-3xl font-bold text-[#FAF7F2] mb-3">
+                Sign In to Reserve a Table
+              </h2>
+
+              <p className="text-sm text-[#C2B59B] mb-8 leading-relaxed max-w-md mx-auto">
+                To guarantee table allocation, real-time booking tracking, and personalized culinary hospitality, please sign in with your TasteHub account before reserving.
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Link
+                  to="/user/login"
+                  state={{ from: "/register" }}
+                  className="py-3.5 px-6 rounded-xl bg-[#D4A373] hover:bg-[#8B5E3C] text-[#141414] hover:text-[#FAF7F2] text-sm font-bold text-center transition-all duration-200 shadow-lg shadow-[#D4A373]/20 flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                >
+                  <span>Sign In to Reserve</span>
+                  <ArrowRight size={16} />
+                </Link>
+
+                <Link
+                  to="/signup"
+                  state={{ from: "/register" }}
+                  className="py-3.5 px-6 rounded-xl bg-[#202020] hover:bg-[#282828] border border-[#3A2E24] text-xs font-bold text-[#FAF7F2] text-center transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                >
+                  <span>Create an Account</span>
+                </Link>
+              </div>
+
+              <p className="text-[11px] text-[#8B7E6A] mt-6">
+                Instant confirmation • Verified diner bookings • Free cancellation
+              </p>
+            </div>
           ) : (
             /* ---------------- 950px MAIN LUXURY RESERVATION FORM ---------------- */
             <form
@@ -351,6 +421,31 @@ export default function ConsumerForm() {
             >
               {/* Top Luxury Gradient Trim */}
               <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#D4A373] via-[#FAF7F2] to-[#8B5E3C]"></div>
+
+              {/* Authenticated Diner Status Badge */}
+              <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-2xl bg-[#202020] border border-[#3A2E24] shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#D4A373] to-[#8B5E3C] text-[#141414] flex items-center justify-center font-bold shadow">
+                    <ShieldCheck size={18} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-[#FAF7F2]">
+                        {userProfile.name || "Authenticated Diner"}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 text-[10px] font-semibold uppercase tracking-wider">
+                        Verified Account
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[#C2B59B]">
+                      {userProfile.email ? `${userProfile.email} • ` : ""}Reservation will be linked to your account
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs text-[#D4A373] font-medium hidden sm:inline">
+                  ✨ Priority Table Allocation
+                </span>
+              </div>
 
               {/* 1. OCCASION & GATHERING SELECTOR (5-Column Desktop Grid with Interactive Lift & Pop) */}
               <div>

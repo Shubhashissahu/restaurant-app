@@ -41,7 +41,14 @@ function AppContent({ token, setToken }) {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/menu" element={<Menu />} />
-          <Route path="/register" element={<ConsumerForm />} />
+          <Route
+            path="/register"
+            element={
+              <ProtectedRoute token={token} setToken={setToken}>
+                <ConsumerForm />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/login" element={<Login setToken={setToken} />} />
           <Route path="/admin/login" element={<Login setToken={setToken} initialRole="admin" />} />
           <Route path="/manager/login" element={<Login setToken={setToken} initialRole="manager" />} />
