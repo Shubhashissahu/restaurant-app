@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const consumerSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Admin',
+    default: null
+  },
   name: {
     type: String,
     required: [true, 'Name is required'],

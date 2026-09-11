@@ -66,7 +66,7 @@ export default function Footer() {
                 to="/register"
                 className="hover:text-[#D4A373] transition duration-300"
               >
-                Register
+                Reserve Table
               </Link>
             </li>
 

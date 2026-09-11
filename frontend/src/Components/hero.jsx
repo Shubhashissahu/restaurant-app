@@ -1,5 +1,3 @@
-// src/components/Hero.jsx
-
 import { ArrowRight, Award } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -13,6 +11,15 @@ export default function Hero() {
       menuEl.scrollIntoView({ behavior: "smooth" });
     } else {
       navigate("/menu");
+    }
+  };
+
+  const handleReserveTable = () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      navigate("/user/login", { state: { from: "/register" } });
+    } else {
+      navigate("/register");
     }
   };
 
@@ -89,7 +96,7 @@ export default function Hero() {
 
             {/* SECONDARY BUTTON */}
             <button
-              onClick={() => navigate("/register")}
+              onClick={handleReserveTable}
               className="border border-[#D4A373]/50 hover:border-[#D4A373] text-[#FAF7F2] font-semibold px-8 py-4 rounded-2xl hover:bg-[#D4A373]/10 active:scale-95 backdrop-blur-sm transition-all duration-300 cursor-pointer"
             >
 
